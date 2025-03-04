@@ -3,7 +3,7 @@ export const schema = [
 	`CREATE TABLE IF NOT EXISTS entities (
     name TEXT PRIMARY KEY,
     entity_type TEXT NOT NULL,
-    embedding F32_BLOB(4), -- 4 dimensions for testing
+    embedding F32_BLOB(384), -- 4 dimensions for testing
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
 

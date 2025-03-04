@@ -1,4 +1,4 @@
-import { DatabaseManager } from '../client.js';
+import { DatabaseManager } from '../index.js';
 import { get_database_config } from '../config.js';
 import { schema } from './schema.js';
 

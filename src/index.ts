@@ -11,7 +11,7 @@ import {
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { DatabaseManager } from './db/client.js';
+import { DatabaseManager } from './db/index.js';
 import { get_database_config } from './db/config.js';
 import { Relation } from './types/index.js';
 
@@ -118,6 +118,10 @@ class LibSqlMemoryServer {
 										},
 									],
 								},
+								includeEmbeddings: {
+									type: 'boolean',
+									description: 'Whether to include embeddings in the returned entities (default: false)',
+								},
 							},
 							required: ['query'],
 						},
@@ -127,7 +131,12 @@ class LibSqlMemoryServer {
 						description: 'Get recent entities and their relations',
 						inputSchema: {
 							type: 'object',
-							properties: {},
+							properties: {
+								includeEmbeddings: {
+									type: 'boolean',
+									description: 'Whether to include embeddings in the returned entities (default: false)',
+								},
+							},
 							required: [],
 						},
 					},
@@ -242,7 +251,9 @@ class LibSqlMemoryServer {
 									'Query must be either a string or number array',
 								);
 							}
-							const result = await this.db.search_nodes(query);
+							// Check if includeEmbeddings parameter is provided
+							const includeEmbeddings = request.params.arguments?.includeEmbeddings === true;
+							const result = await this.db.search_nodes(query, includeEmbeddings);
 							return {
 								content: [
 									{
@@ -254,7 +265,9 @@ class LibSqlMemoryServer {
 						}
 
 						case 'read_graph': {
-							const result = await this.db.read_graph();
+							// Check if includeEmbeddings parameter is provided
+							const includeEmbeddings = request.params.arguments?.includeEmbeddings === true;
+							const result = await this.db.read_graph(includeEmbeddings);
 							return {
 								content: [
 									{

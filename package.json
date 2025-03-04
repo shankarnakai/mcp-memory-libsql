@@ -37,8 +37,12 @@
     "build": "tsc && chmod +x dist/index.js",
     "start": "node dist/index.js",
     "dev": "node --loader ts-node/esm src/index.ts",
-    "test": "jest",
+    "test": "node --loader ts-node/esm src/db/test.ts",
+    "test:jest": "jest",
     "migrate": "node --loader ts-node/esm src/db/migrations/run.ts",
+    "migrate:vector-dimension": "node --loader ts-node/esm src/db/migrations/update-vector-dimension.ts",
+    "test:embeddings": "node --loader ts-node/esm src/db/test-embeddings.ts",
+    "regenerate:embeddings": "node --loader ts-node/esm src/db/regenerate-embeddings.ts",
     "prepare": "pnpm run build",
     "changeset": "changeset",
     "version": "changeset version",
@@ -48,7 +52,9 @@
     "@libsql/client": "^0.14.0",
     "@modelcontextprotocol/sdk": "1.6.1",
     "@types/node": "^22.13.8",
-    "dotenv": "^16.4.7"
+    "@xenova/transformers": "^2.16.0",
+    "dotenv": "^16.4.7",
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
@@ -60,5 +66,10 @@
   },
   "volta": {
     "node": "22.13.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp"
+    ]
   }
 }

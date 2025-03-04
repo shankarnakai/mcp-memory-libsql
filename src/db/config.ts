@@ -1,4 +1,4 @@
-import { DatabaseConfig } from './client.js';
+import { DatabaseConfig } from './types.js';
 
 export function get_database_config(): DatabaseConfig {
 	const url = process.env.LIBSQL_URL || 'file:./memory-tool.db';
