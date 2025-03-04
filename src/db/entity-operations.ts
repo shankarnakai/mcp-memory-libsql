@@ -1,8 +1,9 @@
 import { Entity, SearchResult } from '../types/index.js';
-import { DatabaseClient, EntityCreateParams } from './types.js';
+import { DatabaseClient, EntityCreateParams, RelationCreateParams } from './types.js';
 import { arrayToVectorString, extractVector } from './vector-utils.js';
 import { generateEmbedding } from './embedding-service.js';
 import { logger } from '../utils/logger.js';
+import { createRelations } from './relation-operations.js';
 
 /**
  * Creates or updates entities with observations and optional embeddings
@@ -112,6 +113,18 @@ export async function createEntities(
 				}
 
 				await txn.commit();
+
+				// Handle relations if provided
+				if (entity.relations && entity.relations.length > 0) {
+					// Create relations for this entity
+					const relationParams: RelationCreateParams[] = entity.relations.map(rel => ({
+						from: entity.name,
+						to: rel.target,
+						relationType: rel.relationType
+					}));
+					
+					await createRelations(client, relationParams);
+				}
 			} catch (error) {
 				await txn.rollback();
 				throw error;

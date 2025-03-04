@@ -90,6 +90,18 @@ class LibSqlMemoryServer {
 												description:
 													'Optional vector embedding for similarity search',
 											},
+											relations: {
+												type: 'array',
+												items: {
+													type: 'object',
+													properties: {
+														target: { type: 'string' },
+														relationType: { type: 'string' }
+													},
+													required: ['target', 'relationType']
+												},
+												description: 'Optional relations to create with this entity'
+											},
 										},
 										required: ['name', 'entityType', 'observations'],
 									},
@@ -216,6 +228,10 @@ class LibSqlMemoryServer {
 								entityType: string;
 								observations: string[];
 								embedding?: number[];
+								relations?: Array<{
+									target: string;
+									relationType: string;
+								}>;
 							}>;
 							if (!entities) {
 								throw new McpError(

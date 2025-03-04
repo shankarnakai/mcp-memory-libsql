@@ -12,6 +12,10 @@ export interface EntityCreateParams {
 	entityType: string;
 	observations: string[];
 	embedding?: number[];
+	relations?: Array<{
+		target: string;
+		relationType: string;
+	}>;
 }
 
 export interface RelationCreateParams {
