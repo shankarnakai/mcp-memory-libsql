@@ -35,13 +35,16 @@ export class DatabaseManager {
 	private array_to_vector_string(
 		numbers: number[] | undefined,
 	): string {
-		// Default vector dimensions - configurable based on model
-		const DEFAULT_VECTOR_DIMENSIONS = 768; // Common embedding dimension
-		const DEFAULT_ZERO_VECTOR = Array(DEFAULT_VECTOR_DIMENSIONS).fill(0.0);
-		
 		// If no embedding provided, create a default zero vector
 		if (!numbers || !Array.isArray(numbers)) {
-			return `[${DEFAULT_ZERO_VECTOR.join(', ')}]`;
+			return '[0.0, 0.0, 0.0, 0.0]';
+		}
+
+		// Validate vector dimensions match schema (4 dimensions for testing)
+		if (numbers.length !== 4) {
+			throw new Error(
+				`Vector must have exactly 4 dimensions, got ${numbers.length}. Please provide a 4D vector or omit for default zero vector.`,
+			);
 		}
 
 		// Validate all elements are numbers and convert NaN/Infinity to 0
@@ -54,37 +57,8 @@ export class DatabaseManager {
 			}
 			return n;
 		});
-		
-		// Check if the vector has the expected dimensions
-		if (sanitized_numbers.length !== DEFAULT_VECTOR_DIMENSIONS) {
-			console.warn(
-				`Vector dimension mismatch: got ${sanitized_numbers.length}, expected ${DEFAULT_VECTOR_DIMENSIONS}`
-			);
-			
-			// If dimensions are smaller than expected, pad with zeros
-			if (sanitized_numbers.length < DEFAULT_VECTOR_DIMENSIONS) {
-				console.warn(`Padding vector from ${sanitized_numbers.length} to ${DEFAULT_VECTOR_DIMENSIONS} dimensions`);
-				sanitized_numbers.push(...Array(DEFAULT_VECTOR_DIMENSIONS - sanitized_numbers.length).fill(0.0));
-			}
-			
-			// If dimensions are larger than expected, truncate
-			if (sanitized_numbers.length > DEFAULT_VECTOR_DIMENSIONS) {
-				console.warn(`Truncating vector from ${sanitized_numbers.length} to ${DEFAULT_VECTOR_DIMENSIONS} dimensions`);
-				sanitized_numbers.length = DEFAULT_VECTOR_DIMENSIONS;
-			}
-		}
 
-		// Normalize the vector (unit length) for better similarity search
-		const magnitude = Math.sqrt(
-			sanitized_numbers.reduce((sum, val) => sum + val * val, 0)
-		);
-		
-		// Avoid division by zero
-		const normalized = magnitude > 0
-			? sanitized_numbers.map(n => n / magnitude)
-			: sanitized_numbers;
-
-		return `[${normalized.join(', ')}]`;
+		return `[${sanitized_numbers.join(', ')}]`;
 	}
 
 	// Extract vector from binary format
@@ -210,24 +184,6 @@ export class DatabaseManager {
 			// Validate input vector
 			if (!Array.isArray(embedding)) {
 				throw new Error('Search embedding must be an array');
-			}
-
-			// Ensure the embedding has the correct dimensions
-			const DEFAULT_VECTOR_DIMENSIONS = 768;
-			if (embedding.length !== DEFAULT_VECTOR_DIMENSIONS) {
-				console.warn(`Vector dimension mismatch in search_similar: got ${embedding.length}, expected ${DEFAULT_VECTOR_DIMENSIONS}`);
-				
-				// If dimensions are smaller than expected, pad with zeros
-				if (embedding.length < DEFAULT_VECTOR_DIMENSIONS) {
-					console.warn(`Padding search vector from ${embedding.length} to ${DEFAULT_VECTOR_DIMENSIONS} dimensions`);
-					embedding = [...embedding, ...Array(DEFAULT_VECTOR_DIMENSIONS - embedding.length).fill(0.0)];
-				}
-				
-				// If dimensions are larger than expected, truncate
-				if (embedding.length > DEFAULT_VECTOR_DIMENSIONS) {
-					console.warn(`Truncating search vector from ${embedding.length} to ${DEFAULT_VECTOR_DIMENSIONS} dimensions`);
-					embedding = embedding.slice(0, DEFAULT_VECTOR_DIMENSIONS);
-				}
 			}
 
 			const vector_string = this.array_to_vector_string(embedding);
@@ -573,7 +529,7 @@ export class DatabaseManager {
 				CREATE TABLE IF NOT EXISTS entities (
 					name TEXT PRIMARY KEY,
 					entity_type TEXT NOT NULL,
-					embedding F32_BLOB, -- Flexible dimension vector
+					embedding F32_BLOB(4), -- 4-dimension vector for testing
 					created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 				)
 			`);
@@ -619,11 +575,10 @@ export class DatabaseManager {
 						sql: 'CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target)',
 						args: [],
 					},
-					// Skip vector index creation for now as it's causing compatibility issues
-					// {
-					// 	sql: 'CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))',
-					// 	args: [],
-					// },
+					{
+						sql: 'CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))',
+						args: [],
+					},
 				],
 				'write',
 			);
