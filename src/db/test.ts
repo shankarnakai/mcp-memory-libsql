@@ -100,6 +100,14 @@ async function runTests() {
     console.log('\n--- Testing Core Database Operations ---');
     const coreManager = await CoreDatabaseManager.getInstance(config);
     const client = coreManager.getClient();
+    
+    // Explicitly initialize the database to ensure tables are created
+    await coreManager.initialize();
+    
+    // Initialize the DatabaseService singleton that's used by entity operations
+    const { databaseService } = await import('../services/database-service.js');
+    await databaseService.initialize();
+    
     console.log('✓ Core database initialization successful');
     
     // Test entity operations

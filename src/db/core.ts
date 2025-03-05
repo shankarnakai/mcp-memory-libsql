@@ -4,12 +4,11 @@ import { logger } from '../utils/logger.js';
 import { EMBEDDING_DIMENSION } from '../services/embedding-service.js';
 import {
 	createEntities,
-	searchSimilar,
 	getEntity,
-	searchEntities,
 	getRecentEntities,
 	deleteEntity
-} from './entity-operations.js';
+} from '../services/entity-service.js';
+import { searchSimilar, searchEntities } from './index.js';
 import {
 	createRelations,
 	deleteRelation,
@@ -18,7 +17,7 @@ import {
 import {
 	readGraph,
 	searchNodes
-} from './graph-operations.js';
+} from '../services/graph-service.js';
 import { Entity, Relation, SearchResult } from '../types/index.js';
 
 /**
@@ -176,8 +175,7 @@ export class DatabaseManager {
 			embedding?: number[];
 		}>,
 	): Promise<void> {
-		const client = this.getClient();
-		return createEntities(client, entities);
+		return createEntities(entities);
 	}
 
 	/**
@@ -203,8 +201,7 @@ export class DatabaseManager {
 	 * @returns Entity object with observations and optional embedding
 	 */
 	async get_entity(name: string, includeEmbeddings: boolean = false): Promise<Entity> {
-		const client = this.getClient();
-		return getEntity(client, name, includeEmbeddings);
+		return getEntity(name, includeEmbeddings);
 	}
 
 	/**
@@ -225,8 +222,7 @@ export class DatabaseManager {
 	 * @returns Array of recent entities
 	 */
 	async get_recent_entities(limit = 10, includeEmbeddings: boolean = false): Promise<Entity[]> {
-		const client = this.getClient();
-		return getRecentEntities(client, limit, includeEmbeddings);
+		return getRecentEntities(limit, includeEmbeddings);
 	}
 
 	/**
@@ -242,8 +238,7 @@ export class DatabaseManager {
 	 * @param name - Name of the entity to delete
 	 */
 	async delete_entity(name: string): Promise<void> {
-		const client = this.getClient();
-		return deleteEntity(client, name);
+		return deleteEntity(name);
 	}
 
 	/**
@@ -281,8 +276,7 @@ export class DatabaseManager {
 		entities: Entity[];
 		relations: Relation[];
 	}> {
-		const client = this.getClient();
-		return readGraph(client, 10, includeEmbeddings);
+		return readGraph(10, includeEmbeddings);
 	}
 
 	/**
@@ -295,8 +289,7 @@ export class DatabaseManager {
 		query: string | number[],
 		includeEmbeddings: boolean = false,
 	): Promise<{ entities: Entity[]; relations: Relation[] }> {
-		const client = this.getClient();
-		return searchNodes(client, query, includeEmbeddings);
+		return searchNodes(query, includeEmbeddings);
 	}
 
 	/**

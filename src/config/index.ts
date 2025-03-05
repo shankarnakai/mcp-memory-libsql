@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { readFileSync } from 'fs';
 
 // Load environment variables from .env file
 config();
@@ -70,7 +71,7 @@ export function loadConfig(): AppConfig {
   try {
     // Read package.json for name and version
     const packageJson = JSON.parse(
-      require('fs').readFileSync(join(rootDir, 'package.json'), 'utf8')
+      readFileSync(join(rootDir, 'package.json'), 'utf8')
     );
     
     // Create configuration with environment variables and defaults
