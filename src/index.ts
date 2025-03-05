@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { ServerTransport } from './transports/transport.js';
+import { SseServerTransport } from './transports/sse-transport.js';
+import { TransportAdapter } from './transports/transport-adapter.js';
 import {
   CallToolRequestSchema,
   ErrorCode,
@@ -497,10 +500,12 @@ class MemoryServer {
    * Connect to the MCP transport
    * @param transport - The MCP transport to connect to
    */
-  public async connect(transport: StdioServerTransport): Promise<void> {
+  public async connect(transport: ServerTransport): Promise<void> {
     try {
       logger.info('Connecting to MCP transport...');
-      await this.server.connect(transport);
+      // Use type assertion to convert ServerTransport to any
+      // This is a workaround for the type incompatibility issue
+      await this.server.connect(transport as any);
       logger.info('Connected to MCP transport successfully');
     } catch (error) {
       logger.error('Failed to connect to MCP transport:', error);
@@ -533,11 +538,30 @@ class MemoryServer {
       // Initialize the server
       await this.initialize();
       
-      // Connect to the MCP transport
-      const transport = new StdioServerTransport();
-      await this.connect(transport);
-      
-      logger.info(`${serverConfig.name} v${serverConfig.version} running on stdio`);
+      // Connect to the MCP transport based on configuration
+      if (serverConfig.transport === 'sse') {
+        logger.info('Using SSE transport');
+        // Use the SseServerTransport directly with a type assertion
+        // This is a workaround for the type incompatibility issue
+        const transport = new SseServerTransport();
+        
+        // Start the SSE transport server before connecting
+        // This is necessary because the HTTP server needs to be running
+        // before we can connect to it
+        logger.info('Starting SSE transport server...');
+        await transport.start();
+        
+        await this.connect(transport);
+        logger.info(`${serverConfig.name} v${serverConfig.version} running on SSE transport`);
+      } else {
+        // Default to stdio transport
+        logger.info('Using stdio transport');
+        const transport = new StdioServerTransport();
+        // Use the server.connect method directly for StdioServerTransport
+        // since it's already compatible with the MCP SDK's Transport interface
+        await this.server.connect(transport);
+        logger.info(`${serverConfig.name} v${serverConfig.version} running on stdio`);
+      }
     } catch (error) {
       logger.error('Failed to start server:', error);
       process.exit(1);

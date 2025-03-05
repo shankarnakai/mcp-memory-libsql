@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Memory LibSQL SSE Transport Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <h1>MCP Memory LibSQL SSE Transport Test</h1>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Connection Status</h2>
+            <div id="status" class="status disconnected">Disconnected</div>
+            <div class="form-group">
+                <label for="sseUrl">SSE Server URL:</label>
+                <input type="text" id="sseUrl" value="http://localhost:3000/mcp/events">
+            </div>
+            <div class="form-group">
+                <label for="requestUrl">Request URL:</label>
+                <input type="text" id="requestUrl" value="http://localhost:3000/mcp/request">
+            </div>
+            <button id="connectBtn">Connect</button>
+            <button id="disconnectBtn" disabled>Disconnect</button>
+        </div>
+        
+        <div class="card">
+            <h2>Test Operations</h2>
+            <div class="form-group">
+                <label for="operation">Operation:</label>
+                <select id="operation">
+                    <option value="create_entities">Create Entities</option>
+                    <option value="search_nodes">Search Nodes</option>
+                    <option value="read_graph">Read Graph</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="payload">Request Payload:</label>
+                <textarea id="payload" rows="10">{
+  "name": "create_entities",
+  "arguments": {
+    "entities": [
+      {
+        "name": "SSE Test Entity",
+        "entityType": "TestEntity",
+        "observations": [
+          "This entity was created through SSE transport",
+          "Testing SSE transport functionality"
+        ]
+      }
+    ]
+  }
+}</textarea>
+            </div>
+            <button id="sendBtn" disabled>Send Request</button>
+        </div>
+        
+        <div class="card">
+            <h2>Event Log</h2>
+            <button id="clearLogBtn">Clear Log</button>
+            <div id="eventLog" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const statusEl = document.getElementById('status');
+        const sseUrlInput = document.getElementById('sseUrl');
+        const requestUrlInput = document.getElementById('requestUrl');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const operationSelect = document.getElementById('operation');
+        const payloadTextarea = document.getElementById('payload');
+        const sendBtn = document.getElementById('sendBtn');
+        const eventLogEl = document.getElementById('eventLog');
+        const clearLogBtn = document.getElementById('clearLogBtn');
+        
+        // Variables
+        let eventSource = null;
+        let clientId = null;
+        
+        // Event Handlers
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+        sendBtn.addEventListener('click', sendRequest);
+        clearLogBtn.addEventListener('click', clearLog);
+        operationSelect.addEventListener('change', updatePayload);
+        
+        // Functions
+        function connect() {
+            try {
+                const sseUrl = sseUrlInput.value;
+                
+                // Close existing connection if any
+                if (eventSource) {
+                    eventSource.close();
+                }
+                
+                // Create new EventSource
+                eventSource = new EventSource(sseUrl);
+                
+                // Event handlers
+                eventSource.onopen = function() {
+                    logEvent('Connection opened');
+                };
+                
+                eventSource.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    logEvent('Received message: ' + JSON.stringify(data));
+                    
+                    if (data.type === 'connection') {
+                        clientId = data.clientId;
+                        statusEl.textContent = `Connected (Client ID: ${clientId})`;
+                        statusEl.className = 'status connected';
+                        connectBtn.disabled = true;
+                        disconnectBtn.disabled = false;
+                        sendBtn.disabled = false;
+                    }
+                };
+                
+                eventSource.onerror = function(error) {
+                    logEvent('Connection error: ' + JSON.stringify(error));
+                    disconnect();
+                };
+                
+                logEvent('Connecting to ' + sseUrl);
+            } catch (error) {
+                logEvent('Error connecting: ' + error.message);
+            }
+        }
+        
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            
+            clientId = null;
+            statusEl.textContent = 'Disconnected';
+            statusEl.className = 'status disconnected';
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            sendBtn.disabled = true;
+            
+            logEvent('Disconnected from server');
+        }
+        
+        function sendRequest() {
+            try {
+                const requestUrl = requestUrlInput.value;
+                const payload = JSON.parse(payloadTextarea.value);
+                
+                logEvent('Sending request: ' + JSON.stringify(payload));
+                
+                fetch(requestUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    logEvent('Request response: ' + JSON.stringify(data));
+                })
+                .catch(error => {
+                    logEvent('Request error: ' + error.message);
+                });
+            } catch (error) {
+                logEvent('Error sending request: ' + error.message);
+            }
+        }
+        
+        function updatePayload() {
+            const operation = operationSelect.value;
+            let payload = {};
+            
+            switch (operation) {
+                case 'create_entities':
+                    payload = {
+                        name: 'create_entities',
+                        arguments: {
+                            entities: [
+                                {
+                                    name: 'SSE Test Entity',
+                                    entityType: 'TestEntity',
+                                    observations: [
+                                        'This entity was created through SSE transport',
+                                        'Testing SSE transport functionality'
+                                    ]
+                                }
+                            ]
+                        }
+                    };
+                    break;
+                    
+                case 'search_nodes':
+                    payload = {
+                        name: 'search_nodes',
+                        arguments: {
+                            query: 'SSE Test'
+                        }
+                    };
+                    break;
+                    
+                case 'read_graph':
+                    payload = {
+                        name: 'read_graph',
+                        arguments: {}
+                    };
+                    break;
+            }
+            
+            payloadTextarea.value = JSON.stringify(payload, null, 2);
+        }
+        
+        function logEvent(message) {
+            const timestamp = new Date().toISOString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            eventLogEl.prepend(logEntry);
+        }
+        
+        function clearLog() {
+            eventLogEl.innerHTML = '';
+        }
+        
+        // Initialize
+        updatePayload();
+    </script>
+</body>
+</html>

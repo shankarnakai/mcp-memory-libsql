@@ -12,15 +12,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = join(__dirname, '..', '..');
 
+import { ServerConfig, SseOptions } from '../types/server-config.js';
+
 /**
  * Configuration interface for the application
  */
 export interface AppConfig {
   // Server configuration
-  server: {
-    name: string;
-    version: string;
-  };
+  server: ServerConfig;
   
   // Database configuration
   database: {
@@ -49,6 +48,12 @@ const defaultConfig: AppConfig = {
   server: {
     name: 'mcp-memory-libsql',
     version: '0.0.14', // This should be read from package.json
+    transport: 'stdio', // Default to stdio transport
+    sseOptions: {
+      port: 3000,
+      host: 'localhost',
+      cors: true,
+    },
   },
   database: {
     url: 'file:memory.db',
@@ -79,6 +84,8 @@ export function loadConfig(): AppConfig {
       server: {
         name: packageJson.name || defaultConfig.server.name,
         version: packageJson.version || defaultConfig.server.version,
+        transport: (process.env.TRANSPORT_TYPE as 'stdio' | 'sse') || defaultConfig.server.transport,
+        sseOptions: defaultConfig.server.sseOptions,
       },
       database: {
         url: process.env.DATABASE_URL || defaultConfig.database.url,
@@ -94,6 +101,15 @@ export function loadConfig(): AppConfig {
         includeTimestamps: process.env.LOG_TIMESTAMPS === 'true' || defaultConfig.logging.includeTimestamps,
       },
     };
+
+    // Override SSE options if provided in environment variables
+    if (config.server.transport === 'sse') {
+      config.server.sseOptions = {
+        port: process.env.SSE_PORT ? parseInt(process.env.SSE_PORT, 10) : defaultConfig.server.sseOptions!.port,
+        host: process.env.SSE_HOST || defaultConfig.server.sseOptions!.host,
+        cors: process.env.SSE_CORS ? process.env.SSE_CORS === 'true' : defaultConfig.server.sseOptions!.cors,
+      };
+    }
     
     return config;
   } catch (error) {

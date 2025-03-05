@@ -51,10 +51,16 @@
   "dependencies": {
     "@libsql/client": "^0.14.0",
     "@modelcontextprotocol/sdk": "1.6.1",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@types/node": "^22.13.8",
+    "@types/uuid": "^10.0.0",
     "@xenova/transformers": "^2.16.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "sharp": "^0.33.5"
+    "express": "^5.0.1",
+    "sharp": "^0.33.5",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
