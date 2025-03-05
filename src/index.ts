@@ -2,400 +2,552 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
-	CallToolRequest,
-	CallToolRequestSchema,
-	ErrorCode,
-	ListToolsRequestSchema,
-	McpError,
+  CallToolRequestSchema,
+  ErrorCode,
+  ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
+  ListToolsRequestSchema,
+  McpError,
+  ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-import { DatabaseManager } from './db/index.js';
-import { get_database_config } from './db/config.js';
-import { Relation } from './types/index.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const pkg = JSON.parse(
-	readFileSync(join(__dirname, '..', 'package.json'), 'utf8'),
-);
-const { name, version } = pkg;
+import { serverConfig } from './config/index.js';
+import { logger } from './utils/logger.js';
+import { toMcpError } from './utils/errors.js';
+import { databaseService } from './services/database-service.js';
+import { embeddingService } from './services/embedding-service.js';
+import { createEntities, deleteEntity } from './services/entity-service.js';
+import { createRelations, deleteRelation } from './services/relation-service.js';
+import { readGraph, searchNodes } from './services/graph-service.js';
 
-class LibSqlMemoryServer {
-	private server: Server;
-	private db!: DatabaseManager;
+/**
+ * Main MCP server class for memory operations
+ */
+class MemoryServer {
+  private server: Server;
 
-	private constructor() {
-		this.server = new Server(
-			{ name, version },
-			{
-				capabilities: {
-					tools: {
-						create_entities: {},
-						search_nodes: {},
-						read_graph: {},
-						create_relations: {},
-						delete_entity: {},
-						delete_relation: {},
-					},
-				},
-			},
-		);
+  constructor() {
+    // Initialize the MCP server
+    this.server = new Server(
+      {
+        name: serverConfig.name,
+        version: serverConfig.version,
+      },
+      {
+        capabilities: {
+          resources: {},
+          tools: {},
+        },
+      }
+    );
 
-		// Error handling
-		this.server.onerror = (error: Error) =>
-			console.error('[MCP Error]', error);
-		process.on('SIGINT', async () => {
-			await this.db?.close();
-			await this.server.close();
-			process.exit(0);
-		});
-	}
+    // Set up request handlers
+    this.setupToolHandlers();
+    
+    // Set up error handling
+    this.server.onerror = (error) => {
+      logger.error('MCP Server Error:', error);
+    };
 
-	public static async create(): Promise<LibSqlMemoryServer> {
-		const instance = new LibSqlMemoryServer();
-		const config = get_database_config();
-		instance.db = await DatabaseManager.get_instance(config);
-		instance.setup_tool_handlers();
-		return instance;
-	}
+    // Set up process signal handling
+    process.on('SIGINT', async () => {
+      logger.info('Received SIGINT signal, shutting down...');
+      await this.close();
+      process.exit(0);
+    });
 
-	private setup_tool_handlers() {
-		this.server.setRequestHandler(
-			ListToolsRequestSchema,
-			async () => ({
-				tools: [
-					{
-						name: 'create_entities',
-						description:
-							'Create new entities with observations and optional embeddings',
-						inputSchema: {
-							type: 'object',
-							properties: {
-								entities: {
-									type: 'array',
-									items: {
-										type: 'object',
-										properties: {
-											name: { type: 'string' },
-											entityType: { type: 'string' },
-											observations: {
-												type: 'array',
-												items: { type: 'string' },
-											},
-											embedding: {
-												type: 'array',
-												items: { type: 'number' },
-												description:
-													'Optional vector embedding for similarity search',
-											},
-											relations: {
-												type: 'array',
-												items: {
-													type: 'object',
-													properties: {
-														target: { type: 'string' },
-														relationType: { type: 'string' }
-													},
-													required: ['target', 'relationType']
-												},
-												description: 'Optional relations to create with this entity'
-											},
-										},
-										required: ['name', 'entityType', 'observations'],
-									},
-								},
-							},
-							required: ['entities'],
-						},
-					},
-					{
-						name: 'search_nodes',
-						description:
-							'Search for entities and their relations using text or vector similarity',
-						inputSchema: {
-							type: 'object',
-							properties: {
-								query: {
-									oneOf: [
-										{
-											type: 'string',
-											description: 'Text search query',
-										},
-										{
-											type: 'array',
-											items: { type: 'number' },
-											description: 'Vector for similarity search',
-										},
-									],
-								},
-								includeEmbeddings: {
-									type: 'boolean',
-									description: 'Whether to include embeddings in the returned entities (default: false)',
-								},
-							},
-							required: ['query'],
-						},
-					},
-					{
-						name: 'read_graph',
-						description: 'Get recent entities and their relations',
-						inputSchema: {
-							type: 'object',
-							properties: {
-								includeEmbeddings: {
-									type: 'boolean',
-									description: 'Whether to include embeddings in the returned entities (default: false)',
-								},
-							},
-							required: [],
-						},
-					},
-					{
-						name: 'create_relations',
-						description: 'Create relations between entities',
-						inputSchema: {
-							type: 'object',
-							properties: {
-								relations: {
-									type: 'array',
-									items: {
-										type: 'object',
-										properties: {
-											source: { type: 'string' },
-											target: { type: 'string' },
-											type: { type: 'string' },
-										},
-										required: ['source', 'target', 'type'],
-									},
-								},
-							},
-							required: ['relations'],
-						},
-					},
-					{
-						name: 'delete_entity',
-						description:
-							'Delete an entity and all its associated data (observations and relations)',
-						inputSchema: {
-							type: 'object',
-							properties: {
-								name: {
-									type: 'string',
-									description: 'Name of the entity to delete',
-								},
-							},
-							required: ['name'],
-						},
-					},
-					{
-						name: 'delete_relation',
-						description:
-							'Delete a specific relation between entities',
-						inputSchema: {
-							type: 'object',
-							properties: {
-								source: {
-									type: 'string',
-									description: 'Source entity name',
-								},
-								target: {
-									type: 'string',
-									description: 'Target entity name',
-								},
-								type: {
-									type: 'string',
-									description: 'Type of relation',
-								},
-							},
-							required: ['source', 'target', 'type'],
-						},
-					},
-				],
-			}),
-		);
+    process.on('SIGTERM', async () => {
+      logger.info('Received SIGTERM signal, shutting down...');
+      await this.close();
+      process.exit(0);
+    });
+  }
 
-		this.server.setRequestHandler(
-			CallToolRequestSchema,
-			async (request: CallToolRequest) => {
-				try {
-					switch (request.params.name) {
-						case 'create_entities': {
-							const entities = request.params.arguments
-								?.entities as Array<{
-								name: string;
-								entityType: string;
-								observations: string[];
-								embedding?: number[];
-								relations?: Array<{
-									target: string;
-									relationType: string;
-								}>;
-							}>;
-							if (!entities) {
-								throw new McpError(
-									ErrorCode.InvalidParams,
-									'Missing entities parameter',
-								);
-							}
-							await this.db.create_entities(entities);
-							return {
-								content: [
-									{
-										type: 'text',
-										text: `Successfully processed ${entities.length} entities (created new or updated existing)`,
-									},
-								],
-							};
-						}
+  /**
+   * Set up tool handlers for the MCP server
+   */
+  private setupToolHandlers(): void {
+    // List available tools
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: [
+        {
+          name: 'create_entities',
+          description: 'Create new entities with observations and optional embeddings',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              entities: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: {
+                      type: 'string',
+                    },
+                    entityType: {
+                      type: 'string',
+                    },
+                    observations: {
+                      type: 'array',
+                      items: {
+                        type: 'string',
+                      },
+                    },
+                    embedding: {
+                      type: 'array',
+                      items: {
+                        type: 'number',
+                      },
+                      description: 'Optional vector embedding for similarity search',
+                    },
+                    relations: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          target: {
+                            type: 'string',
+                          },
+                          relationType: {
+                            type: 'string',
+                          },
+                        },
+                        required: [
+                          'target',
+                          'relationType',
+                        ],
+                      },
+                      description: 'Optional relations to create with this entity',
+                    },
+                  },
+                  required: [
+                    'name',
+                    'entityType',
+                    'observations',
+                  ],
+                },
+              },
+            },
+            required: [
+              'entities',
+            ],
+          },
+        },
+        {
+          name: 'search_nodes',
+          description: 'Search for entities and their relations using text or vector similarity',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              query: {
+                oneOf: [
+                  {
+                    type: 'string',
+                    description: 'Text search query',
+                  },
+                  {
+                    type: 'array',
+                    items: {
+                      type: 'number',
+                    },
+                    description: 'Vector for similarity search',
+                  },
+                ],
+              },
+              includeEmbeddings: {
+                type: 'boolean',
+                description: 'Whether to include embeddings in the returned entities (default: false)',
+              },
+            },
+            required: [
+              'query',
+            ],
+          },
+        },
+        {
+          name: 'read_graph',
+          description: 'Get recent entities and their relations',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              includeEmbeddings: {
+                type: 'boolean',
+                description: 'Whether to include embeddings in the returned entities (default: false)',
+              },
+            },
+            required: [],
+          },
+        },
+        {
+          name: 'create_relations',
+          description: 'Create relations between entities',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              relations: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    source: {
+                      type: 'string',
+                    },
+                    target: {
+                      type: 'string',
+                    },
+                    type: {
+                      type: 'string',
+                    },
+                  },
+                  required: [
+                    'source',
+                    'target',
+                    'type',
+                  ],
+                },
+              },
+            },
+            required: [
+              'relations',
+            ],
+          },
+        },
+        {
+          name: 'delete_entity',
+          description: 'Delete an entity and all its associated data (observations and relations)',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+                description: 'Name of the entity to delete',
+              },
+            },
+            required: [
+              'name',
+            ],
+          },
+        },
+        {
+          name: 'delete_relation',
+          description: 'Delete a specific relation between entities',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              source: {
+                type: 'string',
+                description: 'Source entity name',
+              },
+              target: {
+                type: 'string',
+                description: 'Target entity name',
+              },
+              type: {
+                type: 'string',
+                description: 'Type of relation',
+              },
+            },
+            required: [
+              'source',
+              'target',
+              'type',
+            ],
+          },
+        },
+      ],
+    }));
 
-						case 'search_nodes': {
-							const query = request.params.arguments?.query;
-							if (query === undefined || query === null) {
-								throw new McpError(
-									ErrorCode.InvalidParams,
-									'Missing query parameter',
-								);
-							}
-							// Validate query type
-							if (
-								!(typeof query === 'string' || Array.isArray(query))
-							) {
-								throw new McpError(
-									ErrorCode.InvalidParams,
-									'Query must be either a string or number array',
-								);
-							}
-							// Check if includeEmbeddings parameter is provided
-							const includeEmbeddings = request.params.arguments?.includeEmbeddings === true;
-							const result = await this.db.search_nodes(query, includeEmbeddings);
-							return {
-								content: [
-									{
-										type: 'text',
-										text: JSON.stringify(result, null, 2),
-									},
-								],
-							};
-						}
+    // Handle tool calls
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      try {
+        const { name, arguments: args = {} } = request.params;
+        logger.info(`Tool call: ${name}`, args);
 
-						case 'read_graph': {
-							// Check if includeEmbeddings parameter is provided
-							const includeEmbeddings = request.params.arguments?.includeEmbeddings === true;
-							const result = await this.db.read_graph(includeEmbeddings);
-							return {
-								content: [
-									{
-										type: 'text',
-										text: JSON.stringify(result, null, 2),
-									},
-								],
-							};
-						}
+        // Define interfaces for tool arguments
+        interface EntityInput {
+          name: string;
+          entityType: string;
+          observations: string[];
+          embedding?: number[];
+          relations?: Array<{
+            target: string;
+            relationType: string;
+          }>;
+        }
 
-						case 'create_relations': {
-							const relations = request.params.arguments
-								?.relations as Array<{
-								source: string;
-								target: string;
-								type: string;
-							}>;
-							if (!relations) {
-								throw new McpError(
-									ErrorCode.InvalidParams,
-									'Missing relations parameter',
-								);
-							}
-							// Convert to internal Relation type
-							const internalRelations: Relation[] = relations.map(
-								(r) => ({
-									from: r.source,
-									to: r.target,
-									relationType: r.type,
-								}),
-							);
-							await this.db.create_relations(internalRelations);
-							return {
-								content: [
-									{
-										type: 'text',
-										text: `Created ${relations.length} relations`,
-									},
-								],
-							};
-						}
+        interface SearchNodesInput {
+          query: string | number[];
+          includeEmbeddings?: boolean;
+        }
 
-						case 'delete_entity': {
-							const name = request.params.arguments?.name;
-							if (!name || typeof name !== 'string') {
-								throw new McpError(
-									ErrorCode.InvalidParams,
-									'Missing or invalid entity name',
-								);
-							}
-							await this.db.delete_entity(name);
-							return {
-								content: [
-									{
-										type: 'text',
-										text: `Successfully deleted entity "${name}" and its associated data`,
-									},
-								],
-							};
-						}
+        interface ReadGraphInput {
+          includeEmbeddings?: boolean;
+        }
 
-						case 'delete_relation': {
-							const { source, target, type } =
-								request.params.arguments || {};
-							if (
-								!source ||
-								!target ||
-								!type ||
-								typeof source !== 'string' ||
-								typeof target !== 'string' ||
-								typeof type !== 'string'
-							) {
-								throw new McpError(
-									ErrorCode.InvalidParams,
-									'Missing or invalid relation parameters',
-								);
-							}
-							await this.db.delete_relation(source, target, type);
-							return {
-								content: [
-									{
-										type: 'text',
-										text: `Successfully deleted relation: ${source} -> ${target} (${type})`,
-									},
-								],
-							};
-						}
+        interface RelationInput {
+          source: string;
+          target: string;
+          type: string;
+        }
 
-						default:
-							throw new McpError(
-								ErrorCode.MethodNotFound,
-								`Unknown tool: ${request.params.name}`,
-							);
-					}
-				} catch (error) {
-					if (error instanceof McpError) throw error;
-					throw new McpError(
-						ErrorCode.InternalError,
-						error instanceof Error ? error.message : String(error),
-					);
-				}
-			},
-		);
-	}
+        interface DeleteEntityInput {
+          name: string;
+        }
 
-	async run() {
-		const transport = new StdioServerTransport();
-		await this.server.connect(transport);
-		console.error('LibSQL Memory MCP server running on stdio');
-	}
+        interface DeleteRelationInput {
+          source: string;
+          target: string;
+          type: string;
+        }
+
+        switch (name) {
+          case 'create_entities': {
+            // Define the expected type for entities
+            interface EntityInput {
+              name: string;
+              entityType: string;
+              observations: string[];
+              embedding?: number[];
+              relations?: Array<{
+                target: string;
+                relationType: string;
+              }>;
+            }
+            
+            // Type assertion with proper interface
+            const entities = args.entities as EntityInput[];
+            await createEntities(entities);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Successfully processed ${entities.length} entities (created new or updated existing)`,
+                },
+              ],
+            };
+          }
+
+          case 'search_nodes': {
+            // Safely access properties with type assertions for each property
+            if (!args.query) {
+              throw new McpError(
+                ErrorCode.InvalidParams,
+                'Missing required parameter: query'
+              );
+            }
+            
+            const query = args.query as string | number[];
+            const includeEmbeddings = args.includeEmbeddings as boolean || false;
+            
+            const result = await searchNodes(query, includeEmbeddings);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(result, null, 2),
+                },
+              ],
+            };
+          }
+
+          case 'read_graph': {
+            // Safely access properties with type assertions
+            const includeEmbeddings = args.includeEmbeddings as boolean || false;
+            
+            // Use a fixed limit of 10 for the number of entities to return
+            const result = await readGraph(10, includeEmbeddings);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(result, null, 2),
+                },
+              ],
+            };
+          }
+
+          case 'create_relations': {
+            // Define the expected type for relations
+            interface RelationInput {
+              source: string;
+              target: string;
+              type: string;
+            }
+            
+            // Type assertion with proper interface
+            const relationInputs = args.relations as RelationInput[];
+            
+            // Map to the format expected by createRelations
+            const relations = relationInputs.map(rel => ({
+              from: rel.source,
+              to: rel.target,
+              relationType: rel.type,
+            }));
+            
+            await createRelations(relations);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Successfully created ${relations.length} relations`,
+                },
+              ],
+            };
+          }
+
+          case 'delete_entity': {
+            // Safely access properties with type assertions
+            if (!args.name) {
+              throw new McpError(
+                ErrorCode.InvalidParams,
+                'Missing required parameter: name'
+              );
+            }
+            
+            const name = args.name as string;
+            await deleteEntity(name);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Successfully deleted entity: ${name}`,
+                },
+              ],
+            };
+          }
+
+          case 'delete_relation': {
+            // Safely access properties with type assertions
+            if (!args.source || !args.target || !args.type) {
+              throw new McpError(
+                ErrorCode.InvalidParams,
+                'Missing required parameters: source, target, or type'
+              );
+            }
+            
+            const source = args.source as string;
+            const target = args.target as string;
+            const type = args.type as string;
+            
+            await deleteRelation(source, target, type);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Successfully deleted relation: ${source} -> ${target} (${type})`,
+                },
+              ],
+            };
+          }
+
+          default:
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Unknown tool: ${name}`
+            );
+        }
+      } catch (error) {
+        logger.error('Error handling tool call:', error);
+        const mcpError = toMcpError(error);
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: mcpError.message,
+            },
+          ],
+          isError: true,
+        };
+      }
+    });
+
+    // We don't use resources, but we need to handle these requests
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+      resources: [],
+    }));
+
+    this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
+      resourceTemplates: [],
+    }));
+
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      throw new McpError(
+        ErrorCode.MethodNotFound,
+        `Resource not found: ${request.params.uri}`
+      );
+    });
+  }
+
+  /**
+   * Initialize the server and database
+   */
+  public async initialize(): Promise<void> {
+    try {
+      logger.info('Initializing database...');
+      await databaseService.initialize();
+      logger.info('Database initialized successfully');
+    } catch (error) {
+      logger.error('Failed to initialize database:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Connect to the MCP transport
+   * @param transport - The MCP transport to connect to
+   */
+  public async connect(transport: StdioServerTransport): Promise<void> {
+    try {
+      logger.info('Connecting to MCP transport...');
+      await this.server.connect(transport);
+      logger.info('Connected to MCP transport successfully');
+    } catch (error) {
+      logger.error('Failed to connect to MCP transport:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Close the server and database connection
+   */
+  public async close(): Promise<void> {
+    try {
+      logger.info('Closing server...');
+      await this.server.close();
+      logger.info('Server closed successfully');
+      
+      logger.info('Closing database connection...');
+      await databaseService.close();
+      logger.info('Database connection closed successfully');
+    } catch (error) {
+      logger.error('Error during shutdown:', error);
+    }
+  }
+
+  /**
+   * Run the server
+   */
+  public async run(): Promise<void> {
+    try {
+      // Initialize the server
+      await this.initialize();
+      
+      // Connect to the MCP transport
+      const transport = new StdioServerTransport();
+      await this.connect(transport);
+      
+      logger.info(`${serverConfig.name} v${serverConfig.version} running on stdio`);
+    } catch (error) {
+      logger.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  }
 }
 
-LibSqlMemoryServer.create()
-	.then((server) => server.run())
-	.catch(console.error);
+// Create and run the server
+const server = new MemoryServer();
+server.run().catch((error) => {
+  logger.error('Unhandled error:', error);
+  process.exit(1);
+});

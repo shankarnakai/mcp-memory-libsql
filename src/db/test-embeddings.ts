@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { DatabaseManager } from './index.js';
-import { get_database_config } from './config.js';
+import { databaseConfig } from '../config/index.js';
 import { logger } from '../utils/logger.js';
-import { generateEmbedding } from './embedding-service.js';
+import { embeddingService } from '../services/embedding-service.js';
 
 /**
  * Test script to verify the embedding functionality
@@ -11,14 +11,14 @@ async function testEmbeddings() {
     logger.info('Starting embedding test...');
     
     // Get database connection
-    const config = get_database_config();
+    const config = databaseConfig;
     const dbManager = await DatabaseManager.get_instance(config);
     
     try {
         // Test 1: Generate an embedding
         logger.info('Test 1: Generating embedding for test text...');
         const testText = "This is a test of the embedding functionality";
-        const embedding = await generateEmbedding(testText);
+        const embedding = await embeddingService.generateEmbedding(testText);
         logger.info(`Successfully generated embedding with dimension: ${embedding.length}`);
         
         // Test 2: Create an entity with automatic embedding

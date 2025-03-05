@@ -20,19 +20,19 @@ import {
   searchEntities,
   getRecentEntities,
   deleteEntity
-} from './entity-operations.js';
+} from './index.js';
 import {
   createRelations,
   deleteRelation,
   getRelationsForEntities
-} from './relation-operations.js';
+} from './index.js';
 import {
   readGraph,
   searchNodes
-} from './graph-operations.js';
-import { arrayToVectorString, extractVector } from './vector-utils.js';
+} from './index.js';
+import { arrayToVectorString, extractVector } from './index.js';
 import { DatabaseConfig } from './types.js';
-import { DEFAULT_EMBEDDING_DIMENSION } from './embedding-service.js';
+import { EMBEDDING_DIMENSION } from '../services/embedding-service.js';
 
 // Test configuration
 const config: DatabaseConfig = {
@@ -43,7 +43,7 @@ const config: DatabaseConfig = {
 // Helper function to generate a test embedding vector of the correct dimension
 function generateTestEmbedding(seed: number): number[] {
   const embedding: number[] = [];
-  for (let i = 0; i < DEFAULT_EMBEDDING_DIMENSION; i++) {
+  for (let i = 0; i < EMBEDDING_DIMENSION; i++) {
     // Generate a value between 0 and 1 based on the seed and position
     embedding.push((seed * 0.1 + i * 0.001) % 1);
   }
@@ -104,10 +104,10 @@ async function runTests() {
     
     // Test entity operations
     console.log('\n--- Testing Entity Operations ---');
-    await createEntities(client, testEntities);
+    await createEntities(testEntities);
     console.log('✓ Entity creation successful');
     
-    const entity = await getEntity(client, 'TestEntity1');
+    const entity = await getEntity('TestEntity1');
     console.log(`✓ Entity retrieval successful: ${entity.name}`);
     
     const similarityTestVector = generateTestEmbedding(1); // Use the same vector as TestEntity1
@@ -117,28 +117,28 @@ async function runTests() {
     const searchedEntities = await searchEntities(client, 'Test');
     console.log(`✓ Entity text search successful: ${searchedEntities.length} entities found`);
     
-    const recentEntities = await getRecentEntities(client, 10);
+    const recentEntities = await getRecentEntities(10);
     console.log(`✓ Recent entities retrieval successful: ${recentEntities.length} entities found`);
     
     // Test relation operations
     console.log('\n--- Testing Relation Operations ---');
-    await createRelations(client, testRelations);
+    await createRelations(testRelations);
     console.log('✓ Relation creation successful');
     
     const entityNames = testEntities.map(e => e.name);
-    const relations = await getRelationsForEntities(client, entityNames);
+    const relations = await getRelationsForEntities(entityNames);
     console.log(`✓ Relations retrieval successful: ${relations.length} relations found`);
     
     // Test graph operations
     console.log('\n--- Testing Graph Operations ---');
-    const graph = await readGraph(client);
+    const graph = await readGraph();
     console.log(`✓ Graph read successful: ${graph.entities.length} entities, ${graph.relations.length} relations`);
     
-    const nodeSearchResult = await searchNodes(client, 'Test');
+    const nodeSearchResult = await searchNodes('Test');
     console.log(`✓ Node text search successful: ${nodeSearchResult.entities.length} entities found`);
     
     const nodeSearchVector = generateTestEmbedding(1); // Use the same vector as TestEntity1
-    const vectorSearchResult = await searchNodes(client, nodeSearchVector);
+    const vectorSearchResult = await searchNodes(nodeSearchVector);
     console.log(`✓ Node vector search successful: ${vectorSearchResult.entities.length} entities found`);
     
     // Test vector utilities
@@ -148,10 +148,10 @@ async function runTests() {
     
     // Test deletion operations
     console.log('\n--- Testing Deletion Operations ---');
-    await deleteRelation(client, 'TestEntity1', 'TestEntity2', 'test_relation');
+    await deleteRelation('TestEntity1', 'TestEntity2', 'test_relation');
     console.log('✓ Relation deletion successful');
     
-    await deleteEntity(client, 'TestEntity3');
+    await deleteEntity('TestEntity3');
     console.log('✓ Entity deletion successful');
     
     // Test snake_case interface compatibility
@@ -190,8 +190,8 @@ async function runTests() {
     console.log('✓ Snake case entity deletion successful');
     
     // Clean up remaining test entities
-    await deleteEntity(client, 'TestEntity1');
-    await deleteEntity(client, 'TestEntity2');
+    await deleteEntity('TestEntity1');
+    await deleteEntity('TestEntity2');
     
     // Close connections
     await coreManager.close();

@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 import { DatabaseManager } from '../index.js';
-import { get_database_config } from '../config.js';
+import { databaseConfig } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
-import { generateEmbedding } from '../embedding-service.js';
-import { DEFAULT_EMBEDDING_MODEL } from '../embedding-service.js';
+import { embeddingService } from '../../services/embedding-service.js';
 
 /**
  * Regenerates embeddings for all entities in the database after migration
@@ -14,7 +13,7 @@ async function regenerateEmbeddingsAfterMigration() {
     logger.info('Starting embedding regeneration after migration...');
     
     // Get database connection
-    const config = get_database_config();
+    const config = databaseConfig;
     const dbManager = await DatabaseManager.get_instance(config);
     
     try {
@@ -46,9 +45,9 @@ async function regenerateEmbeddingsAfterMigration() {
                 }
                 
                 // Generate embedding from observations
-                logger.info(`Generating embedding for entity "${entityName}" using ${DEFAULT_EMBEDDING_MODEL}`);
+                logger.info(`Generating embedding for entity "${entityName}" using ${embeddingService.getModelName()}`);
                 const text = observations.join(' ');
-                const embedding = await generateEmbedding(text);
+                const embedding = await embeddingService.generateEmbedding(text);
                 logger.info(`Successfully generated embedding with dimension: ${embedding.length}`);
                 
                 // Update entity with new embedding

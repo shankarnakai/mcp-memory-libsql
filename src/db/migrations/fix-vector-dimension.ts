@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { DatabaseManager } from '../core.js';
-import { get_database_config } from '../config.js';
+import { databaseConfig } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
-import { DEFAULT_EMBEDDING_DIMENSION } from '../embedding-service.js';
+import { EMBEDDING_DIMENSION } from '../../services/embedding-service.js';
 
 /**
  * Migration script to fix the database schema to support the correct vector dimensions
@@ -18,7 +18,7 @@ async function fixVectorDimension() {
     logger.info('Starting vector dimension fix...');
     
     // Get database connection
-    const config = get_database_config();
+    const config = databaseConfig;
     const dbManager = await DatabaseManager.getInstance(config);
     const client = dbManager.getClient();
     
@@ -74,13 +74,13 @@ async function fixVectorDimension() {
             });
             
             // 5. Create new tables with updated vector dimension
-            logger.info(`Creating new entities table with ${DEFAULT_EMBEDDING_DIMENSION} dimensions...`);
+            logger.info(`Creating new entities table with ${EMBEDDING_DIMENSION} dimensions...`);
             await txn.execute({
                 sql: `
                     CREATE TABLE entities (
                         name TEXT PRIMARY KEY,
                         entity_type TEXT NOT NULL,
-                        embedding F32_BLOB(${DEFAULT_EMBEDDING_DIMENSION}), -- Updated dimension
+                        embedding F32_BLOB(${EMBEDDING_DIMENSION}), -- Updated dimension
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     )
                 `

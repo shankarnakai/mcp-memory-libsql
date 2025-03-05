@@ -1,4 +1,4 @@
-import { Entity, Relation, SearchResult } from '../types/index.js';
+import { Entity, Relation } from '../types/index.js';
 
 // Types for database configuration
 export interface DatabaseConfig {

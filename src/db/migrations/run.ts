@@ -1,9 +1,9 @@
 import { DatabaseManager } from '../index.js';
-import { get_database_config } from '../config.js';
+import { databaseConfig } from '../../config/index.js';
 import { schema } from './schema.js';
 
 async function run_migrations() {
-	const config = get_database_config();
+	const config = databaseConfig;
 	const db_manager = await DatabaseManager.get_instance(config);
 	const db = db_manager.get_client();
 

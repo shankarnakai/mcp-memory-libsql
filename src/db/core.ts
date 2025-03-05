@@ -1,7 +1,7 @@
 import { createClient } from '@libsql/client';
 import { DatabaseClient, DatabaseConfig } from './types.js';
 import { logger } from '../utils/logger.js';
-import { DEFAULT_EMBEDDING_DIMENSION } from './embedding-service.js';
+import { EMBEDDING_DIMENSION } from '../services/embedding-service.js';
 import {
 	createEntities,
 	searchSimilar,
@@ -14,7 +14,7 @@ import {
 	createRelations,
 	deleteRelation,
 	getRelationsForEntities
-} from './relation-operations.js';
+} from '../services/relation-service.js';
 import {
 	readGraph,
 	searchNodes
@@ -26,7 +26,7 @@ import { Entity, Relation, SearchResult } from '../types/index.js';
  */
 export class DatabaseManager {
 	private static instance: DatabaseManager;
-	private client: any; // Use any temporarily to avoid type errors
+	private client: any; // Using any due to type incompatibility between libsql Client and DatabaseClient
 
 	/**
 	 * Private constructor to enforce singleton pattern
@@ -73,7 +73,7 @@ export class DatabaseManager {
 	 * @returns Database client
 	 */
 	public getClient(): DatabaseClient {
-		return this.client as DatabaseClient;
+		return this.client as unknown as DatabaseClient;
 	}
 
 	/**
@@ -81,7 +81,7 @@ export class DatabaseManager {
 	 * @returns Database client
 	 */
 	public get_client(): DatabaseClient {
-		return this.getClient();
+		return this.client as unknown as DatabaseClient;
 	}
 
 	/**
@@ -89,7 +89,7 @@ export class DatabaseManager {
 	 */
 	public async initialize(): Promise<void> {
 		try {
-			logger.info(`Initializing database schema with vector dimension: ${DEFAULT_EMBEDDING_DIMENSION}`);
+			logger.info(`Initializing database schema with vector dimension: ${EMBEDDING_DIMENSION}`);
 			
 			// Create tables if they don't exist - each as a single statement
 			await this.client.execute({
@@ -97,7 +97,7 @@ export class DatabaseManager {
 					CREATE TABLE IF NOT EXISTS entities (
 						name TEXT PRIMARY KEY,
 						entity_type TEXT NOT NULL,
-						embedding F32_BLOB(${DEFAULT_EMBEDDING_DIMENSION}), -- Using configurable dimension
+						embedding F32_BLOB(${EMBEDDING_DIMENSION}), -- Using configurable dimension
 						created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 					)
 				`
@@ -234,8 +234,7 @@ export class DatabaseManager {
 	 * @param relations - Array of relations to create
 	 */
 	async create_relations(relations: Relation[]): Promise<void> {
-		const client = this.getClient();
-		return createRelations(client, relations);
+		return createRelations(relations);
 	}
 
 	/**
@@ -258,8 +257,7 @@ export class DatabaseManager {
 		target: string,
 		type: string,
 	): Promise<void> {
-		const client = this.getClient();
-		return deleteRelation(client, source, target, type);
+		return deleteRelation(source, target, type);
 	}
 
 	/**
@@ -270,9 +268,8 @@ export class DatabaseManager {
 	async get_relations_for_entities(
 		entities: Entity[],
 	): Promise<Relation[]> {
-		const client = this.getClient();
 		const entityNames = entities.map(entity => entity.name);
-		return getRelationsForEntities(client, entityNames);
+		return getRelationsForEntities(entityNames);
 	}
 
 	/**
@@ -309,7 +306,7 @@ export class DatabaseManager {
 		try {
 			await this.client.close();
 		} catch (error) {
-			console.error('Error closing database connection:', error);
+			logger.error('Error closing database connection:', error);
 		}
 	}
 }
