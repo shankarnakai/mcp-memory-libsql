@@ -1,6 +1,7 @@
 import { DatabaseManager } from '../index.js';
 import { databaseConfig } from '../../config/index.js';
 import { schema } from './schema.js';
+import { fileURLToPath } from 'url';
 
 async function run_migrations() {
 	const config = databaseConfig;
@@ -22,8 +23,9 @@ async function run_migrations() {
 	}
 }
 
-// Run migrations if this file is executed directly
-if (require.main === module) {
+// Run migrations if this file is executed directly (ESM compatible)
+const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMainModule) {
 	run_migrations()
 		.then(() => process.exit(0))
 		.catch((error) => {

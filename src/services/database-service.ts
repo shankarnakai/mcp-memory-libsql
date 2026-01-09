@@ -67,23 +67,25 @@ export class DatabaseService {
       logger.info(`Initializing database schema with vector dimension: ${EMBEDDING_DIMENSION}`);
       
       // Create tables if they don't exist - each as a single statement
+      // Entities table - no embedding (embeddings are on observations)
       await this.client.execute({
         sql: `
           CREATE TABLE IF NOT EXISTS entities (
             name TEXT PRIMARY KEY,
             entity_type TEXT NOT NULL,
-            embedding F32_BLOB(${EMBEDDING_DIMENSION}), -- Using configurable dimension
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )
         `
       });
 
+      // Observations table with embedding for semantic search
       await this.client.execute({
         sql: `
           CREATE TABLE IF NOT EXISTS observations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             entity_name TEXT NOT NULL,
             content TEXT NOT NULL,
+            embedding F32_BLOB(${EMBEDDING_DIMENSION}),
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (entity_name) REFERENCES entities(name)
           )
@@ -124,7 +126,7 @@ export class DatabaseService {
             args: [],
           },
           {
-            sql: 'CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))',
+            sql: 'CREATE INDEX IF NOT EXISTS idx_observations_embedding ON observations(libsql_vector_idx(embedding))',
             args: [],
           },
         ],

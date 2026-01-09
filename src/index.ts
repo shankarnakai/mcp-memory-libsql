@@ -3,7 +3,6 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ServerTransport } from './transports/transport.js';
 import { SseServerTransport } from './transports/sse-transport.js';
-import { TransportAdapter } from './transports/transport-adapter.js';
 import {
   CallToolRequestSchema,
   ErrorCode,
@@ -18,7 +17,6 @@ import { serverConfig } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { toMcpError } from './utils/errors.js';
 import { databaseService } from './services/database-service.js';
-import { embeddingService } from './services/embedding-service.js';
 import { createEntities, deleteEntity } from './services/entity-service.js';
 import { createRelations, deleteRelation } from './services/relation-service.js';
 import { readGraph, searchNodes } from './services/graph-service.js';
@@ -96,13 +94,6 @@ class MemoryServer {
                         type: 'string',
                       },
                     },
-                    embedding: {
-                      type: 'array',
-                      items: {
-                        type: 'number',
-                      },
-                      description: 'Optional vector embedding for similarity search',
-                    },
                     relations: {
                       type: 'array',
                       items: {
@@ -157,10 +148,6 @@ class MemoryServer {
                   },
                 ],
               },
-              includeEmbeddings: {
-                type: 'boolean',
-                description: 'Whether to include embeddings in the returned entities (default: false)',
-              },
             },
             required: [
               'query',
@@ -172,12 +159,7 @@ class MemoryServer {
           description: 'Get recent entities and their relations',
           inputSchema: {
             type: 'object',
-            properties: {
-              includeEmbeddings: {
-                type: 'boolean',
-                description: 'Whether to include embeddings in the returned entities (default: false)',
-              },
-            },
+            properties: {},
             required: [],
           },
         },
@@ -271,20 +253,10 @@ class MemoryServer {
           name: string;
           entityType: string;
           observations: string[];
-          embedding?: number[];
           relations?: Array<{
             target: string;
             relationType: string;
           }>;
-        }
-
-        interface SearchNodesInput {
-          query: string | number[];
-          includeEmbeddings?: boolean;
-        }
-
-        interface ReadGraphInput {
-          includeEmbeddings?: boolean;
         }
 
         interface RelationInput {
@@ -293,30 +265,8 @@ class MemoryServer {
           type: string;
         }
 
-        interface DeleteEntityInput {
-          name: string;
-        }
-
-        interface DeleteRelationInput {
-          source: string;
-          target: string;
-          type: string;
-        }
-
         switch (name) {
           case 'create_entities': {
-            // Define the expected type for entities
-            interface EntityInput {
-              name: string;
-              entityType: string;
-              observations: string[];
-              embedding?: number[];
-              relations?: Array<{
-                target: string;
-                relationType: string;
-              }>;
-            }
-            
             // Type assertion with proper interface
             const entities = args.entities as EntityInput[];
             await createEntities(entities);
@@ -338,11 +288,10 @@ class MemoryServer {
                 'Missing required parameter: query'
               );
             }
-            
+
             const query = args.query as string | number[];
-            const includeEmbeddings = args.includeEmbeddings as boolean || false;
-            
-            const result = await searchNodes(query, includeEmbeddings);
+
+            const result = await searchNodes(query);
             return {
               content: [
                 {
@@ -354,11 +303,8 @@ class MemoryServer {
           }
 
           case 'read_graph': {
-            // Safely access properties with type assertions
-            const includeEmbeddings = args.includeEmbeddings as boolean || false;
-            
             // Use a fixed limit of 10 for the number of entities to return
-            const result = await readGraph(10, includeEmbeddings);
+            const result = await readGraph(10);
             return {
               content: [
                 {
@@ -370,23 +316,16 @@ class MemoryServer {
           }
 
           case 'create_relations': {
-            // Define the expected type for relations
-            interface RelationInput {
-              source: string;
-              target: string;
-              type: string;
-            }
-            
             // Type assertion with proper interface
             const relationInputs = args.relations as RelationInput[];
-            
+
             // Map to the format expected by createRelations
             const relations = relationInputs.map(rel => ({
               from: rel.source,
               to: rel.target,
               relationType: rel.type,
             }));
-            
+
             await createRelations(relations);
             return {
               content: [

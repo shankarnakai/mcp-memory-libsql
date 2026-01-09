@@ -54,15 +54,13 @@ export const searchSimilar = async (
 	client: any,
 	embedding: number[],
 	limit: number = 5,
-	includeEmbeddings: boolean = false,
 ): Promise<any[]> => {
 	// This is a compatibility wrapper that adapts the new service API to the old function signature
-	const { databaseService } = await import('../services/database-service.js');
 	const { searchNodes } = await import('../services/graph-service.js');
-	
+
 	// Use the searchNodes function with the vector embedding
-	const result = await searchNodes(embedding, includeEmbeddings);
-	
+	const result = await searchNodes(embedding);
+
 	// Convert the result to the format expected by the old API
 	return result.entities.map(entity => ({
 		entity,
@@ -74,14 +72,13 @@ export const searchSimilar = async (
 export const searchEntities = async (
 	client: any,
 	query: string,
-	includeEmbeddings: boolean = false,
 ): Promise<any[]> => {
 	// This is a compatibility wrapper that adapts the new service API to the old function signature
 	const { searchNodes } = await import('../services/graph-service.js');
-	
+
 	// Use the searchNodes function with the text query
-	const result = await searchNodes(query, includeEmbeddings);
-	
+	const result = await searchNodes(query);
+
 	// Return just the entities
 	return result.entities;
 };

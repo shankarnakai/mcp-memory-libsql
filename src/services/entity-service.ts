@@ -1,10 +1,9 @@
 import { databaseService } from './database-service.js';
 import { embeddingService } from './embedding-service.js';
-import { arrayToVectorString, extractVector } from './vector-service.js';
+import { arrayToVectorString } from './vector-service.js';
 import { logger } from '../utils/logger.js';
 import { DatabaseError, ValidationError, parseDatabaseError } from '../utils/errors.js';
-import { Entity, EntityCreateParams, SearchResult } from '../models/index.js';
-import { DatabaseClient } from '../types/database.js';
+import { Entity, EntityCreateParams } from '../models/index.js';
 
 /**
  * Entity service for managing entities in the database
@@ -32,33 +31,19 @@ export class EntityService {
           throw new ValidationError(`Entity "${entity.name}" must have at least one observation`);
         }
 
-        // Generate embedding if not provided
-        let embedding = entity.embedding;
-        if (!embedding) {
-          try {
-            logger.info(`Generating embedding for entity: ${entity.name}`);
-            const text = entity.observations.join(' ');
-            embedding = await embeddingService.generateEmbedding(text);
-          } catch (error) {
-            logger.error(`Failed to generate embedding for entity "${entity.name}":`, error);
-          }
-        }
-
         // Use a transaction for entity and observations
         await databaseService.transaction(async (txn) => {
-          const vectorString = arrayToVectorString(embedding);
-          
-          // First try to update
+          // First try to update entity (no embedding on entity anymore)
           const result = await txn.execute({
-            sql: 'UPDATE entities SET entity_type = ?, embedding = vector32(?) WHERE name = ?',
-            args: [entity.entityType, vectorString, entity.name],
+            sql: 'UPDATE entities SET entity_type = ? WHERE name = ?',
+            args: [entity.entityType, entity.name],
           });
 
           // If no rows affected, do insert
           if (result.rowsAffected === 0) {
             await txn.execute({
-              sql: 'INSERT INTO entities (name, entity_type, embedding) VALUES (?, ?, vector32(?))',
-              args: [entity.name, entity.entityType, vectorString],
+              sql: 'INSERT INTO entities (name, entity_type) VALUES (?, ?)',
+              args: [entity.name, entity.entityType],
             });
           }
 
@@ -68,11 +53,22 @@ export class EntityService {
             args: [entity.name],
           });
 
-          // Add new observations
+          // Add new observations with per-observation embeddings
           for (const observation of entity.observations) {
+            let embedding: number[] | undefined;
+
+            try {
+              logger.info(`Generating embedding for observation: "${observation.substring(0, 50)}..."`);
+              embedding = await embeddingService.generateEmbedding(observation);
+            } catch (error) {
+              logger.error(`Failed to generate embedding for observation:`, error);
+            }
+
+            const vectorString = embedding ? arrayToVectorString(embedding) : null;
+
             await txn.execute({
-              sql: 'INSERT INTO observations (entity_name, content) VALUES (?, ?)',
-              args: [entity.name, observation],
+              sql: 'INSERT INTO observations (entity_name, content, embedding) VALUES (?, ?, vector32(?))',
+              args: [entity.name, observation, vectorString],
             });
           }
         });
@@ -127,16 +123,12 @@ export class EntityService {
   /**
    * Gets an entity by name
    * @param name - Name of the entity to retrieve
-   * @param includeEmbeddings - Whether to include embeddings in the returned entity
    */
-  public static async getEntity(
-    name: string,
-    includeEmbeddings = false,
-  ): Promise<Entity> {
+  public static async getEntity(name: string): Promise<Entity> {
     const client = databaseService.getClient();
-    
+
     const entityResult = await client.execute({
-      sql: 'SELECT name, entity_type, embedding FROM entities WHERE name = ?',
+      sql: 'SELECT name, entity_type FROM entities WHERE name = ?',
       args: [name],
     });
 
@@ -149,34 +141,25 @@ export class EntityService {
       args: [name],
     });
 
-    const embedding = includeEmbeddings && entityResult.rows[0].embedding
-      ? await extractVector(client, entityResult.rows[0].embedding as Uint8Array)
-      : undefined;
-
     return {
       name: entityResult.rows[0].name as string,
       entityType: entityResult.rows[0].entity_type as string,
       observations: observationsResult.rows.map(
         (row: { content: string }) => row.content as string,
       ),
-      embedding,
     };
   }
 
   /**
    * Gets recent entities
    * @param limit - Maximum number of entities to retrieve
-   * @param includeEmbeddings - Whether to include embeddings in the returned entities
    */
-  public static async getRecentEntities(
-    limit = 10,
-    includeEmbeddings = false,
-  ): Promise<Entity[]> {
+  public static async getRecentEntities(limit = 10): Promise<Entity[]> {
     try {
       const client = databaseService.getClient();
-      
+
       const entityResults = await client.execute({
-        sql: 'SELECT name, entity_type, embedding FROM entities ORDER BY rowid DESC LIMIT ?',
+        sql: 'SELECT name, entity_type FROM entities ORDER BY rowid DESC LIMIT ?',
         args: [limit],
       });
 
@@ -185,18 +168,14 @@ export class EntityService {
       }
 
       const entities: Entity[] = [];
-      
+
       for (const row of entityResults.rows) {
         const name = row.name as string;
-        
+
         const observationsResult = await client.execute({
           sql: 'SELECT content FROM observations WHERE entity_name = ?',
           args: [name],
         });
-
-        const embedding = includeEmbeddings && row.embedding
-          ? await extractVector(client, row.embedding as Uint8Array)
-          : undefined;
 
         entities.push({
           name,
@@ -204,7 +183,6 @@ export class EntityService {
           observations: observationsResult.rows.map(
             (obsRow: { content: string }) => obsRow.content as string,
           ),
-          embedding,
         });
       }
 

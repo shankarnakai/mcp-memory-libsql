@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_serena_serena__activate_project",
+      "mcp__plugin_serena_serena__list_dir",
+      "mcp__plugin_serena_serena__find_symbol",
+      "Bash(npm run migrate:vector-dimension:*)",
+      "Bash(node --loader ts-node/esm src/db/migrations/fix-vector-dimension.ts:*)",
+      "Bash(DATABASE_URL=\"file:/Users/shankarnakai/.memory/fetch_memory.db\" node:*)",
+      "Bash(node --loader ts-node/esm -e:*)",
+      "Bash(echo 'Databases in ~/.memory:' ls -la ~/.memory/*.db)",
+      "Bash(echo -e '\\\\n\\\\nChecking each database for embedding column:' for db in ~/.memory/*.db)",
+      "Bash(do echo -e '\\\\n=== $db ===' sqlite3 $db \"PRAGMA table_info\\(entities\\);\")",
+      "Bash(npm run build:*)"
+    ]
+  }
+}

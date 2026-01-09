@@ -11,63 +11,45 @@
  * It also verifies backward compatibility with the snake_case interface provided by index.js.
  */
 
-import { DatabaseManager as CoreDatabaseManager } from './core.js';
-import { DatabaseManager as LegacyDatabaseManager } from './index.js';
-import {
-  createEntities,
-  searchSimilar,
-  getEntity,
-  searchEntities,
-  getRecentEntities,
-  deleteEntity
-} from './index.js';
-import {
-  createRelations,
-  deleteRelation,
-  getRelationsForEntities
-} from './index.js';
-import {
-  readGraph,
-  searchNodes
-} from './index.js';
-import { arrayToVectorString, extractVector } from './index.js';
-import { DatabaseConfig } from './types.js';
-import { EMBEDDING_DIMENSION } from '../services/embedding-service.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { existsSync, rmSync } from 'fs';
+import type { DatabaseConfig } from './types.js';
+
+// Force the test run to use a writable database that lives inside the repo
+// (the default .env may point outside the workspace and be read-only in CI/sandboxed runs).
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const repoRoot = join(__dirname, '..', '..');
+const dbFilePath = join(repoRoot, 'memory-test.db');
+
+// Start from a clean test database to avoid stale schemas/data
+if (existsSync(dbFilePath)) {
+  rmSync(dbFilePath);
+}
+
+process.env.DATABASE_URL ??= `file:${dbFilePath}`;
 
 // Test configuration
 const config: DatabaseConfig = {
   url: 'file:memory-test.db',
 };
 
-// Test data
-// Helper function to generate a test embedding vector of the correct dimension
-function generateTestEmbedding(seed: number): number[] {
-  const embedding: number[] = [];
-  for (let i = 0; i < EMBEDDING_DIMENSION; i++) {
-    // Generate a value between 0 and 1 based on the seed and position
-    embedding.push((seed * 0.1 + i * 0.001) % 1);
-  }
-  return embedding;
-}
-
 const testEntities = [
   {
     name: 'TestEntity1',
     entityType: 'test',
     observations: ['Test observation 1', 'Test observation 2'],
-    embedding: generateTestEmbedding(1),
   },
   {
     name: 'TestEntity2',
     entityType: 'test',
     observations: ['Test observation 3', 'Test observation 4'],
-    embedding: generateTestEmbedding(5),
   },
   {
     name: 'TestEntity3',
     entityType: 'test',
     observations: ['Test observation 5', 'Test observation 6'],
-    embedding: generateTestEmbedding(9),
   },
 ];
 
@@ -93,6 +75,44 @@ const testRelations = [
  * Run tests for the refactored modules
  */
 async function runTests() {
+  // Load all modules only after the test DB url is forced above
+  const [
+    { DatabaseManager: CoreDatabaseManager },
+    indexExports,
+    { EMBEDDING_DIMENSION }
+  ] = await Promise.all([
+    import('./core.js'),
+    import('./index.js'),
+    import('../services/embedding-service.js'),
+  ]);
+
+  const {
+    DatabaseManager: LegacyDatabaseManager,
+    createEntities,
+    searchSimilar,
+    getEntity,
+    searchEntities,
+    getRecentEntities,
+    deleteEntity,
+    createRelations,
+    deleteRelation,
+    getRelationsForEntities,
+    readGraph,
+    searchNodes,
+    arrayToVectorString,
+    extractVector,
+  } = indexExports;
+
+  // Helper function to generate a test embedding vector of the correct dimension
+  function generateTestEmbedding(seed: number): number[] {
+    const embedding: number[] = [];
+    for (let i = 0; i < EMBEDDING_DIMENSION; i++) {
+      // Generate a value between 0 and 1 based on the seed and position
+      embedding.push((seed * 0.1 + i * 0.001) % 1);
+    }
+    return embedding;
+  }
+
   console.log('Starting database operations tests...');
   
   try {
@@ -171,7 +191,6 @@ async function runTests() {
         name: 'LegacyEntity',
         entityType: 'test',
         observations: ['Legacy observation 1', 'Legacy observation 2'],
-        embedding: generateTestEmbedding(3), // Use a different seed for variety
       },
     ]);
     console.log('✓ Snake case entity creation successful');

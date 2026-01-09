@@ -3,8 +3,14 @@ import { embeddingService } from './embedding-service.js';
 import { logger } from '../utils/logger.js';
 import { DatabaseError, ValidationError } from '../utils/errors.js';
 import { Entity, GraphResult } from '../models/index.js';
-import { EntityService, getEntity, getRecentEntities } from './entity-service.js';
+import { getEntity, getRecentEntities } from './entity-service.js';
 import { getRelationsForEntities } from './relation-service.js';
+
+/** Similarity threshold for matching observations (cosine distance). Smaller = stricter. */
+const SIMILARITY_THRESHOLD = Number(process.env.SIMILARITY_THRESHOLD ?? '0.4');
+
+/** Maximum number of entities to return from search */
+const MAX_RESULTS = Number(process.env.SIMILARITY_MAX_RESULTS ?? '10');
 
 /**
  * Graph service for managing graph operations
@@ -13,17 +19,13 @@ export class GraphService {
   /**
    * Reads the recent entities and their relations to form a graph
    * @param limit - Maximum number of recent entities to include
-   * @param includeEmbeddings - Whether to include embeddings in the returned entities
    * @returns Graph result with entities and relations
    */
-  public static async readGraph(
-    limit = 10,
-    includeEmbeddings = false,
-  ): Promise<GraphResult> {
+  public static async readGraph(limit = 10): Promise<GraphResult> {
     try {
       // Get recent entities
-      const recentEntities = await getRecentEntities(limit, includeEmbeddings);
-      
+      const recentEntities = await getRecentEntities(limit);
+
       // If no entities found, return empty graph
       if (!recentEntities || recentEntities.length === 0) {
         return {
@@ -31,13 +33,13 @@ export class GraphService {
           relations: [],
         };
       }
-      
+
       // Get entity names
       const entityNames = recentEntities.map((entity: Entity) => entity.name);
-      
+
       // Get relations for these entities
       const relations = await getRelationsForEntities(entityNames);
-      
+
       // Return graph result
       return {
         entities: recentEntities,
@@ -52,152 +54,181 @@ export class GraphService {
 
   /**
    * Searches for nodes in the graph by text query or vector similarity
+   * Searches observation embeddings and ranks entities by number of matching observations
    * @param query - Text query or vector embedding for search
-   * @param includeEmbeddings - Whether to include embeddings in the returned entities
    * @returns Graph result with matching entities and their relations
    */
-  public static async searchNodes(
-    query: string | number[],
-    includeEmbeddings = false,
-  ): Promise<GraphResult> {
+  public static async searchNodes(query: string | number[]): Promise<GraphResult> {
     try {
-      let entities: Entity[] = [];
+      // Ensure database schema exists even if caller forgot to initialize the service
+      await databaseService.initialize();
+
+      let entityNames: string[] = [];
 
       if (Array.isArray(query)) {
         // Validate vector query
         if (!query.every((n) => typeof n === 'number')) {
           throw new ValidationError('Vector query must contain only numbers');
         }
-        
-        // Vector similarity search
-        const client = databaseService.getClient();
-        const results = await client.execute({
-          sql: `
-            SELECT e.name
-            FROM entities e
-            WHERE e.embedding IS NOT NULL
-            ORDER BY vector_distance_cos(e.embedding, vector32(?)) ASC
-            LIMIT 5
-          `,
-          args: [JSON.stringify(query)],
-        });
-        
-        // Get full entities with observations
-        entities = await Promise.all(
-          results.rows.map(async (row: { name: string }) => 
-            getEntity(row.name as string, includeEmbeddings)
-          )
-        );
+
+        // Vector similarity search on observations, fallback to empty result if vector search fails
+        try {
+          entityNames = await GraphService.searchByVector(query);
+        } catch (vectorError) {
+          logger.error('Vector search failed, returning no results:', vectorError);
+          entityNames = [];
+        }
       } else {
         // Validate text query
         if (typeof query !== 'string') {
           throw new ValidationError('Text query must be a string');
         }
-        if (query.trim() === '') {
+        const trimmedQuery = query.trim();
+        if (trimmedQuery === '') {
           throw new ValidationError('Text query cannot be empty');
         }
-        
+
         try {
-          // Try semantic search first by generating an embedding for the text query
-          logger.info(`Generating embedding for text query: "${query}"`);
-          const embedding = await embeddingService.generateEmbedding(query);
-          
-          // Vector similarity search using the generated embedding
+          // Generate embedding for text query
+          logger.info(`Generating embedding for text query: "${trimmedQuery}"`);
+          const embedding = await embeddingService.generateEmbedding(trimmedQuery);
+
+          // Vector similarity search using generated embedding
           logger.info(`Performing semantic search with generated embedding`);
-          const client = databaseService.getClient();
-          const results = await client.execute({
-            sql: `
-              SELECT e.name
-              FROM entities e
-              WHERE e.embedding IS NOT NULL
-              ORDER BY vector_distance_cos(e.embedding, vector32(?)) ASC
-              LIMIT 5
-            `,
-            args: [JSON.stringify(embedding)],
-          });
-          
-          // Get full entities with observations
-          entities = await Promise.all(
-            results.rows.map(async (row: { name: string }) => 
-              getEntity(row.name as string, includeEmbeddings)
-            )
-          );
-          
-          // If we got results, return them
-          if (entities.length > 0) {
-            logger.info(`Found ${entities.length} entities via semantic search`);
+          entityNames = await GraphService.searchByVector(embedding);
+
+          if (entityNames.length > 0) {
+            logger.info(`Found ${entityNames.length} entities via semantic search`);
           } else {
-            // Fall back to text search if no results from semantic search
+            // Fallback to text search
             logger.info(`No results from semantic search, falling back to text search`);
-            
-            // Text-based search
-            const client = databaseService.getClient();
-            const results = await client.execute({
-              sql: `
-                SELECT DISTINCT e.name
-                FROM entities e
-                LEFT JOIN observations o ON e.name = o.entity_name
-                WHERE e.name LIKE ? OR e.entity_type LIKE ? OR o.content LIKE ?
-                LIMIT 5
-              `,
-              args: [`%${query}%`, `%${query}%`, `%${query}%`],
-            });
-            
-            // Get full entities with observations
-            entities = await Promise.all(
-              results.rows.map(async (row: { name: string }) => 
-                getEntity(row.name as string, includeEmbeddings)
-              )
-            );
+            entityNames = await GraphService.searchByText(trimmedQuery);
           }
         } catch (embeddingError) {
-          // If embedding generation fails, fall back to text search
-          logger.error(`Failed to generate embedding for query, falling back to text search:`, embeddingError);
-          
-          // Text-based search
-          const client = databaseService.getClient();
-          const results = await client.execute({
-            sql: `
-              SELECT DISTINCT e.name
-              FROM entities e
-              LEFT JOIN observations o ON e.name = o.entity_name
-              WHERE e.name LIKE ? OR e.entity_type LIKE ? OR o.content LIKE ?
-              LIMIT 5
-            `,
-            args: [`%${query}%`, `%${query}%`, `%${query}%`],
-          });
-          
-          // Get full entities with observations
-          entities = await Promise.all(
-            results.rows.map(async (row: { name: string }) => 
-              getEntity(row.name as string, includeEmbeddings)
-            )
-          );
+          // If embedding generation or vector search fails, fall back to text search
+          logger.error(`Failed to generate embedding or perform semantic search, falling back to text search:`, embeddingError);
+          try {
+            entityNames = await GraphService.searchByText(trimmedQuery);
+          } catch (textError) {
+            // Last-resort: log and return empty instead of throwing, to avoid hard failures in clients
+            logger.error('Text search failed after embedding fallback, returning no results:', textError);
+            entityNames = [];
+          }
         }
       }
 
       // If no entities found, return empty graph
-      if (entities.length === 0) {
+      if (entityNames.length === 0) {
         return { entities: [], relations: [] };
       }
 
-      // Get entity names
-      const entityNames = entities.map((entity: Entity) => entity.name);
-      
+      // Get full entities with ALL observations (not just matching ones)
+      const entities = await Promise.all(
+        entityNames.map(async (name: string) => getEntity(name))
+      );
+
       // Get relations for these entities
       const relations = await getRelationsForEntities(entityNames);
-      
-      // Return graph result
+
       return { entities, relations };
     } catch (error) {
       if (error instanceof ValidationError) {
         throw error;
       }
-      
+
       throw new DatabaseError(
         `Node search failed: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  /**
+   * Search observations by vector similarity and return entity names
+   * Ranks entities by: (1) number of matching observations, (2) average similarity
+   * @param embedding - Query embedding vector
+   * @returns Array of entity names ranked by relevance
+   */
+  private static async searchByVector(embedding: number[]): Promise<string[]> {
+    const client = databaseService.getClient();
+    const vectorString = JSON.stringify(embedding);
+
+    // Search observations with similarity threshold and aggregate by entity
+    // Using CTE to find matching observations, then aggregate and rank
+    const results = await client.execute({
+      sql: `
+        WITH matching_observations AS (
+          SELECT
+            o.entity_name,
+            o.id AS observation_id,
+            vector_distance_cos(o.embedding, vector32(?)) AS distance
+          FROM observations o
+          WHERE o.embedding IS NOT NULL
+            AND vector_distance_cos(o.embedding, vector32(?)) <= ?
+        ),
+        entity_matches AS (
+          SELECT
+            mo.entity_name,
+            COUNT(DISTINCT mo.observation_id) AS match_count,
+            AVG(mo.distance) AS avg_distance
+          FROM matching_observations mo
+          GROUP BY mo.entity_name
+        )
+        SELECT em.entity_name
+        FROM entity_matches em
+        ORDER BY em.avg_distance ASC, em.match_count DESC
+        LIMIT ?
+      `,
+      args: [vectorString, vectorString, SIMILARITY_THRESHOLD, MAX_RESULTS],
+    });
+
+    return results.rows.map((row: { entity_name: string }) => row.entity_name as string);
+  }
+
+  /**
+   * Search by text using word-based fuzzy matching
+   * Splits query into words and searches for each using LIKE
+   * @param query - Text query
+   * @returns Array of entity names ranked by relevance
+   */
+  private static async searchByText(query: string): Promise<string[]> {
+    const client = databaseService.getClient();
+
+    // Split query into words for fuzzy matching
+    const words = query.trim().split(/\s+/).filter((w) => w.length > 0);
+
+    if (words.length === 0) {
+      return [];
+    }
+
+    // Build LIKE conditions for each word
+    // Each word can match entity name, entity type, or observation content
+    const conditions = words
+      .map(() => '(e.name LIKE ? OR e.entity_type LIKE ? OR o.content LIKE ?)')
+      .join(' OR ');
+
+    // Flatten arguments: each word generates 3 LIKE patterns
+    const args = words.flatMap((word) => {
+      const pattern = `%${word}%`;
+      return [pattern, pattern, pattern];
+    });
+
+    // Add limit to args
+    args.push(MAX_RESULTS.toString());
+
+    const results = await client.execute({
+      sql: `
+        SELECT e.name, COUNT(DISTINCT o.id) as match_count
+        FROM entities e
+        LEFT JOIN observations o ON e.name = o.entity_name
+        WHERE ${conditions}
+        GROUP BY e.name
+        ORDER BY match_count DESC
+        LIMIT ?
+      `,
+      args,
+    });
+
+    return results.rows.map((row: { name: string }) => row.name as string);
   }
 }
 

@@ -96,7 +96,6 @@ export class DatabaseManager {
 					CREATE TABLE IF NOT EXISTS entities (
 						name TEXT PRIMARY KEY,
 						entity_type TEXT NOT NULL,
-						embedding F32_BLOB(${EMBEDDING_DIMENSION}), -- Using configurable dimension
 						created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 					)
 				`
@@ -108,6 +107,7 @@ export class DatabaseManager {
 						id INTEGER PRIMARY KEY AUTOINCREMENT,
 						entity_name TEXT NOT NULL,
 						content TEXT NOT NULL,
+						embedding F32_BLOB(${EMBEDDING_DIMENSION}),
 						created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 						FOREIGN KEY (entity_name) REFERENCES entities(name)
 					)
@@ -148,7 +148,7 @@ export class DatabaseManager {
 						args: [],
 					},
 					{
-						sql: 'CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))',
+						sql: 'CREATE INDEX IF NOT EXISTS idx_observations_embedding ON observations(libsql_vector_idx(embedding))',
 						args: [],
 					},
 				],
@@ -164,7 +164,7 @@ export class DatabaseManager {
 	}
 
 	/**
-	 * Creates or updates entities with observations and optional embeddings
+	 * Creates or updates entities with observations (embeddings auto-generated per observation)
 	 * @param entities - Array of entities to create or update
 	 */
 	async create_entities(
@@ -172,7 +172,6 @@ export class DatabaseManager {
 			name: string;
 			entityType: string;
 			observations: string[];
-			embedding?: number[];
 		}>,
 	): Promise<void> {
 		return createEntities(entities);
@@ -182,47 +181,42 @@ export class DatabaseManager {
 	 * Searches for entities by similarity to the provided embedding vector
 	 * @param embedding - Vector embedding to search with
 	 * @param limit - Maximum number of results to return
-	 * @param includeEmbeddings - Whether to include embeddings in the returned entities (default: false)
 	 * @returns Array of search results with entities and distance scores
 	 */
 	async search_similar(
 		embedding: number[],
 		limit: number = 5,
-		includeEmbeddings: boolean = false,
 	): Promise<SearchResult[]> {
 		const client = this.getClient();
-		return searchSimilar(client, embedding, limit, includeEmbeddings);
+		return searchSimilar(client, embedding, limit);
 	}
 
 	/**
 	 * Gets an entity by name
 	 * @param name - Name of the entity to retrieve
-	 * @param includeEmbeddings - Whether to include embeddings in the returned entity (default: false)
-	 * @returns Entity object with observations and optional embedding
+	 * @returns Entity object with observations
 	 */
-	async get_entity(name: string, includeEmbeddings: boolean = false): Promise<Entity> {
-		return getEntity(name, includeEmbeddings);
+	async get_entity(name: string): Promise<Entity> {
+		return getEntity(name);
 	}
 
 	/**
 	 * Searches for entities by text query in name, type, or observations
 	 * @param query - Text query to search for
-	 * @param includeEmbeddings - Whether to include embeddings in the returned entities (default: false)
 	 * @returns Array of matching entities
 	 */
-	async search_entities(query: string, includeEmbeddings: boolean = false): Promise<Entity[]> {
+	async search_entities(query: string): Promise<Entity[]> {
 		const client = this.getClient();
-		return searchEntities(client, query, includeEmbeddings);
+		return searchEntities(client, query);
 	}
 
 	/**
 	 * Gets the most recently created entities
 	 * @param limit - Maximum number of entities to return
-	 * @param includeEmbeddings - Whether to include embeddings in the returned entities (default: false)
 	 * @returns Array of recent entities
 	 */
-	async get_recent_entities(limit = 10, includeEmbeddings: boolean = false): Promise<Entity[]> {
-		return getRecentEntities(limit, includeEmbeddings);
+	async get_recent_entities(limit = 10): Promise<Entity[]> {
+		return getRecentEntities(limit);
 	}
 
 	/**
@@ -269,27 +263,24 @@ export class DatabaseManager {
 
 	/**
 	 * Reads the recent entities and their relations to form a graph
-	 * @param includeEmbeddings - Whether to include embeddings in the returned entities (default: false)
 	 * @returns Graph result with entities and relations
 	 */
-	async read_graph(includeEmbeddings: boolean = false): Promise<{
+	async read_graph(): Promise<{
 		entities: Entity[];
 		relations: Relation[];
 	}> {
-		return readGraph(10, includeEmbeddings);
+		return readGraph(10);
 	}
 
 	/**
 	 * Searches for nodes in the graph by text query or vector similarity
 	 * @param query - Text query or vector embedding for search
-	 * @param includeEmbeddings - Whether to include embeddings in the returned entities (default: false)
 	 * @returns Graph result with matching entities and their relations
 	 */
 	async search_nodes(
 		query: string | number[],
-		includeEmbeddings: boolean = false,
 	): Promise<{ entities: Entity[]; relations: Relation[] }> {
-		return searchNodes(query, includeEmbeddings);
+		return searchNodes(query);
 	}
 
 	/**

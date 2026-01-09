@@ -4,16 +4,13 @@
 export interface Entity {
   /** Unique name identifier for the entity */
   name: string;
-  
+
   /** Type of entity (e.g., person, topic, concept) */
   entityType: string;
-  
+
   /** List of textual observations about the entity */
   observations: string[];
-  
-  /** Optional vector embedding for similarity search */
-  embedding?: number[];
-  
+
   /** Optional creation timestamp */
   createdAt?: Date;
 }
@@ -66,21 +63,18 @@ export interface GraphResult {
 export interface EntityCreateParams {
   /** Entity name */
   name: string;
-  
+
   /** Entity type */
   entityType: string;
-  
-  /** List of observations */
+
+  /** List of observations - embeddings are generated automatically for each observation */
   observations: string[];
-  
-  /** Optional embedding vector */
-  embedding?: number[];
-  
+
   /** Optional relations to create with this entity */
   relations?: Array<{
     /** Target entity name */
     target: string;
-    
+
     /** Relation type */
     relationType: string;
   }>;

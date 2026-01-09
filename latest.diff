@@ -1,0 +1,2710 @@
+diff --git a/.changeset/flat-webs-float.md b/.changeset/flat-webs-float.md
+new file mode 100644
+index 0000000..5ce5110
+--- /dev/null
++++ b/.changeset/flat-webs-float.md
+@@ -0,0 +1,5 @@
++---
++'mcp-memory-libsql': patch
++---
++
++Adding embeddings to observation
+diff --git a/.claude/settings.local.json b/.claude/settings.local.json
+new file mode 100644
+index 0000000..6b9f751
+--- /dev/null
++++ b/.claude/settings.local.json
+@@ -0,0 +1,17 @@
++{
++  "permissions": {
++    "allow": [
++      "mcp__plugin_serena_serena__activate_project",
++      "mcp__plugin_serena_serena__list_dir",
++      "mcp__plugin_serena_serena__find_symbol",
++      "Bash(npm run migrate:vector-dimension:*)",
++      "Bash(node --loader ts-node/esm src/db/migrations/fix-vector-dimension.ts:*)",
++      "Bash(DATABASE_URL=\"file:/Users/shankarnakai/.memory/fetch_memory.db\" node:*)",
++      "Bash(node --loader ts-node/esm -e:*)",
++      "Bash(echo 'Databases in ~/.memory:' ls -la ~/.memory/*.db)",
++      "Bash(echo -e '\\\\n\\\\nChecking each database for embedding column:' for db in ~/.memory/*.db)",
++      "Bash(do echo -e '\\\\n=== $db ===' sqlite3 $db \"PRAGMA table_info\\(entities\\);\")",
++      "Bash(npm run build:*)"
++    ]
++  }
++}
+diff --git a/.serena/.gitignore b/.serena/.gitignore
+new file mode 100644
+index 0000000..14d86ad
+--- /dev/null
++++ b/.serena/.gitignore
+@@ -0,0 +1 @@
++/cache
+diff --git a/.serena/project.yml b/.serena/project.yml
+new file mode 100644
+index 0000000..4940167
+--- /dev/null
++++ b/.serena/project.yml
+@@ -0,0 +1,84 @@
++# list of languages for which language servers are started; choose from:
++#   al               bash             clojure          cpp              csharp           csharp_omnisharp
++#   dart             elixir           elm              erlang           fortran          go
++#   haskell          java             julia            kotlin           lua              markdown
++#   nix              perl             php              python           python_jedi      r
++#   rego             ruby             ruby_solargraph  rust             scala            swift
++#   terraform        typescript       typescript_vts   yaml             zig
++# Note:
++#   - For C, use cpp
++#   - For JavaScript, use typescript
++# Special requirements:
++#   - csharp: Requires the presence of a .sln file in the project folder.
++# When using multiple languages, the first language server that supports a given file will be used for that file.
++# The first language is the default language and the respective language server will be used as a fallback.
++# Note that when using the JetBrains backend, language servers are not used and this list is correspondingly ignored.
++languages:
++- typescript
++
++# the encoding used by text files in the project
++# For a list of possible encodings, see https://docs.python.org/3.11/library/codecs.html#standard-encodings
++encoding: "utf-8"
++
++# whether to use the project's gitignore file to ignore files
++# Added on 2025-04-07
++ignore_all_files_in_gitignore: true
++
++# list of additional paths to ignore
++# same syntax as gitignore, so you can use * and **
++# Was previously called `ignored_dirs`, please update your config if you are using that.
++# Added (renamed) on 2025-04-07
++ignored_paths: []
++
++# whether the project is in read-only mode
++# If set to true, all editing tools will be disabled and attempts to use them will result in an error
++# Added on 2025-04-18
++read_only: false
++
++# list of tool names to exclude. We recommend not excluding any tools, see the readme for more details.
++# Below is the complete list of tools for convenience.
++# To make sure you have the latest list of tools, and to view their descriptions, 
++# execute `uv run scripts/print_tool_overview.py`.
++#
++#  * `activate_project`: Activates a project by name.
++#  * `check_onboarding_performed`: Checks whether project onboarding was already performed.
++#  * `create_text_file`: Creates/overwrites a file in the project directory.
++#  * `delete_lines`: Deletes a range of lines within a file.
++#  * `delete_memory`: Deletes a memory from Serena's project-specific memory store.
++#  * `execute_shell_command`: Executes a shell command.
++#  * `find_referencing_code_snippets`: Finds code snippets in which the symbol at the given location is referenced.
++#  * `find_referencing_symbols`: Finds symbols that reference the symbol at the given location (optionally filtered by type).
++#  * `find_symbol`: Performs a global (or local) search for symbols with/containing a given name/substring (optionally filtered by type).
++#  * `get_current_config`: Prints the current configuration of the agent, including the active and available projects, tools, contexts, and modes.
++#  * `get_symbols_overview`: Gets an overview of the top-level symbols defined in a given file.
++#  * `initial_instructions`: Gets the initial instructions for the current project.
++#     Should only be used in settings where the system prompt cannot be set,
++#     e.g. in clients you have no control over, like Claude Desktop.
++#  * `insert_after_symbol`: Inserts content after the end of the definition of a given symbol.
++#  * `insert_at_line`: Inserts content at a given line in a file.
++#  * `insert_before_symbol`: Inserts content before the beginning of the definition of a given symbol.
++#  * `list_dir`: Lists files and directories in the given directory (optionally with recursion).
++#  * `list_memories`: Lists memories in Serena's project-specific memory store.
++#  * `onboarding`: Performs onboarding (identifying the project structure and essential tasks, e.g. for testing or building).
++#  * `prepare_for_new_conversation`: Provides instructions for preparing for a new conversation (in order to continue with the necessary context).
++#  * `read_file`: Reads a file within the project directory.
++#  * `read_memory`: Reads the memory with the given name from Serena's project-specific memory store.
++#  * `remove_project`: Removes a project from the Serena configuration.
++#  * `replace_lines`: Replaces a range of lines within a file with new content.
++#  * `replace_symbol_body`: Replaces the full definition of a symbol.
++#  * `restart_language_server`: Restarts the language server, may be necessary when edits not through Serena happen.
++#  * `search_for_pattern`: Performs a search for a pattern in the project.
++#  * `summarize_changes`: Provides instructions for summarizing the changes made to the codebase.
++#  * `switch_modes`: Activates modes by providing a list of their names
++#  * `think_about_collected_information`: Thinking tool for pondering the completeness of collected information.
++#  * `think_about_task_adherence`: Thinking tool for determining whether the agent is still on track with the current task.
++#  * `think_about_whether_you_are_done`: Thinking tool for determining whether the task is truly completed.
++#  * `write_memory`: Writes a named memory (for future reference) to Serena's project-specific memory store.
++excluded_tools: []
++
++# initial prompt for the project. It will always be given to the LLM upon activating the project
++# (contrary to the memories, which are loaded on demand).
++initial_prompt: ""
++
++project_name: "mcp-semantic-memory-libsql"
++included_optional_tools: []
+diff --git a/README-EMBEDDINGS.md b/README-EMBEDDINGS.md
+index 80b756f..cf6dfc7 100644
+--- a/README-EMBEDDINGS.md
++++ b/README-EMBEDDINGS.md
+@@ -117,4 +117,4 @@ export const DEFAULT_EMBEDDING_MODEL = 'Xenova/bge-small-en-v1.5';
+ export const DEFAULT_EMBEDDING_DIMENSION = 384;
+ ```
+ 
+-Make sure to also update the `DEFAULT_EMBEDDING_DIMENSION` to match the output dimension of the new model.
+\ No newline at end of file
++Make sure to also update the `DEFAULT_EMBEDDING_DIMENSION` to match the output dimension of the new model.
+diff --git a/package-lock.json b/package-lock.json
+index 6687d3e..a634ad6 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "mcp-memory-libsql",
+-  "version": "0.0.14",
++  "version": "0.0.15",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "mcp-memory-libsql",
+-      "version": "0.0.14",
++      "version": "0.0.15",
+       "license": "MIT",
+       "dependencies": {
+         "@libsql/client": "^0.14.0",
+@@ -79,6 +79,7 @@
+       "integrity": "sha512-lWBYIrF7qK5+GjY5Uy+/hEgp8OJWOD/rpy74GplYRhEauvbHDeFB8t5hPOZxCZ0Oxf4Cc36tK51/l3ymJysrKw==",
+       "dev": true,
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "@ampproject/remapping": "^2.2.0",
+         "@babel/code-frame": "^7.26.2",
+@@ -2153,6 +2154,7 @@
+       "resolved": "https://registry.npmjs.org/@types/node/-/node-22.13.9.tgz",
+       "integrity": "sha512-acBjXdRJ3A6Pb3tqnw9HZmyR3Fiol3aGxRCK1x3d+6CDAMjl7I649wpSd+yNURCjbOUGu9tqtLKnTGxmK6CyGw==",
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "undici-types": "~6.20.0"
+       }
+@@ -2754,6 +2756,7 @@
+         }
+       ],
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "caniuse-lite": "^1.0.30001688",
+         "electron-to-chromium": "^1.5.73",
+@@ -3584,6 +3587,7 @@
+       "resolved": "https://registry.npmjs.org/express/-/express-5.0.1.tgz",
+       "integrity": "sha512-ORF7g6qGnD+YtUG9yx4DFoqCShNMmUKiXuT5oWMHiOvt/4WFbHC6yCwQMTSBMno7AqntNCAzzcnnjowRkTL9eQ==",
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "accepts": "^2.0.0",
+         "body-parser": "^2.0.1",
+@@ -4515,6 +4519,7 @@
+       "integrity": "sha512-NIy3oAFp9shda19hy4HK0HRTWKtPJmGdnvywu01nOqNC2vZg+Z+fvJDxpMQA88eb2I9EcafcdjYgsDthnYTvGw==",
+       "dev": true,
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "@jest/core": "^29.7.0",
+         "@jest/types": "^29.6.3",
+@@ -7121,6 +7126,7 @@
+       "integrity": "sha512-f0FFpIdcHgn8zcPSbf1dRevwt047YMnaiJM3u2w2RewrB+fob/zePZcrOyQoLMMO7aBIddLcQIEK5dYjkLnGrQ==",
+       "dev": true,
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "@cspotcode/source-map-support": "^0.8.0",
+         "@tsconfig/node10": "^1.0.7",
+@@ -7221,6 +7227,7 @@
+       "integrity": "sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ==",
+       "dev": true,
+       "license": "Apache-2.0",
++      "peer": true,
+       "bin": {
+         "tsc": "bin/tsc",
+         "tsserver": "bin/tsserver"
+@@ -7512,6 +7519,7 @@
+       "resolved": "https://registry.npmjs.org/zod/-/zod-3.24.2.tgz",
+       "integrity": "sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ==",
+       "license": "MIT",
++      "peer": true,
+       "funding": {
+         "url": "https://github.com/sponsors/colinhacks"
+       }
+diff --git a/package.json b/package.json
+index da1df7c..39cccd6 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "mcp-memory-libsql",
+-  "version": "0.0.14",
++  "version": "0.0.15",
+   "description": "LibSQL-based persistent memory tool for MCP",
+   "license": "MIT",
+   "type": "module",
+@@ -39,8 +39,11 @@
+     "dev": "node --loader ts-node/esm src/index.ts",
+     "test": "node --loader ts-node/esm src/db/test.ts",
+     "test:jest": "jest",
++    "ts-node": "ts-node --esm",
++    "run:vector-query": "node --loader ts-node/esm src/db/run-vector-query.ts",
+     "migrate": "node --loader ts-node/esm src/db/migrations/run.ts",
+     "migrate:vector-dimension": "node --loader ts-node/esm src/db/migrations/update-vector-dimension.ts",
++    "migrate:embeddings-to-observations": "node --loader ts-node/esm src/db/migrations/migrate-embeddings-to-observations.ts",
+     "test:embeddings": "node --loader ts-node/esm src/db/test-embeddings.ts",
+     "regenerate:embeddings": "node --loader ts-node/esm src/db/regenerate-embeddings.ts",
+     "prepare": "pnpm run build",
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 0b1e5f5..4266532 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -14,18 +14,36 @@ importers:
+       '@modelcontextprotocol/sdk':
+         specifier: 1.6.1
+         version: 1.6.1
++      '@types/cors':
++        specifier: ^2.8.17
++        version: 2.8.19
++      '@types/express':
++        specifier: ^5.0.0
++        version: 5.0.6
+       '@types/node':
+         specifier: ^22.13.8
+         version: 22.13.8
++      '@types/uuid':
++        specifier: ^10.0.0
++        version: 10.0.0
+       '@xenova/transformers':
+         specifier: ^2.16.0
+         version: 2.17.2
++      cors:
++        specifier: ^2.8.5
++        version: 2.8.5
+       dotenv:
+         specifier: ^16.4.7
+         version: 16.4.7
++      express:
++        specifier: ^5.0.1
++        version: 5.0.1
+       sharp:
+         specifier: ^0.33.5
+         version: 0.33.5
++      uuid:
++        specifier: ^11.1.0
++        version: 11.1.0
+     devDependencies:
+       '@changesets/cli':
+         specifier: ^2.28.1
+@@ -622,9 +640,27 @@ packages:
+   '@types/babel__traverse@7.20.6':
+     resolution: {integrity: sha512-r1bzfrm0tomOI8g1SzvCaQHo6Lcv6zu0EA+W2kHrt8dyrHQxGzBBL4kdkzIS+jBMV+EYcMAEAqXqYaLJq5rOZg==}
+ 
++  '@types/body-parser@1.19.6':
++    resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
++
++  '@types/connect@3.4.38':
++    resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
++
++  '@types/cors@2.8.19':
++    resolution: {integrity: sha512-mFNylyeyqN93lfe/9CSxOGREz8cpzAhH+E93xJ4xWQf62V8sQ/24reV2nyzUWM6H6Xji+GGHpkbLe7pVoUEskg==}
++
++  '@types/express-serve-static-core@5.1.0':
++    resolution: {integrity: sha512-jnHMsrd0Mwa9Cf4IdOzbz543y4XJepXrbia2T4b6+spXC2We3t1y6K44D3mR8XMFSXMCf3/l7rCgddfx7UNVBA==}
++
++  '@types/express@5.0.6':
++    resolution: {integrity: sha512-sKYVuV7Sv9fbPIt/442koC7+IIwK5olP1KWeD88e/idgoJqDm3JV/YUiPwkoKK92ylff2MGxSz1CSjsXelx0YA==}
++
+   '@types/graceful-fs@4.1.9':
+     resolution: {integrity: sha512-olP3sd1qOEe5dXTSaFvQG+02VdRXcdytWLAZsAq1PecU8uqQAhkrnbli7DagjtXKW/Bl7YJbUsa8MPcuc8LHEQ==}
+ 
++  '@types/http-errors@2.0.5':
++    resolution: {integrity: sha512-r8Tayk8HJnX0FztbZN7oVqGccWgw98T/0neJphO91KkmOzug1KkofZURD4UaD5uH8AqcFLfdPErnBod0u71/qg==}
++
+   '@types/istanbul-lib-coverage@2.0.6':
+     resolution: {integrity: sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==}
+ 
+@@ -646,9 +682,24 @@ packages:
+   '@types/node@22.13.8':
+     resolution: {integrity: sha512-G3EfaZS+iOGYWLLRCEAXdWK9my08oHNZ+FHluRiggIYJPOXzhOiDgpVCUHaUvyIC5/fj7C/p637jdzC666AOKQ==}
+ 
++  '@types/qs@6.14.0':
++    resolution: {integrity: sha512-eOunJqu0K1923aExK6y8p6fsihYEn/BYuQ4g0CxAAgFc4b/ZLN4CrsRZ55srTdqoiLzU2B2evC+apEIxprEzkQ==}
++
++  '@types/range-parser@1.2.7':
++    resolution: {integrity: sha512-hKormJbkJqzQGhziax5PItDUTMAM9uE2XXQmM37dyd4hVM+5aVl7oVxMVUiVQn2oCQFN/LKCZdvSM0pFRqbSmQ==}
++
++  '@types/send@1.2.1':
++    resolution: {integrity: sha512-arsCikDvlU99zl1g69TcAB3mzZPpxgw0UQnaHeC1Nwb015xp8bknZv5rIfri9xTOcMuaVgvabfIRA7PSZVuZIQ==}
++
++  '@types/serve-static@2.2.0':
++    resolution: {integrity: sha512-8mam4H1NHLtu7nmtalF7eyBH14QyOASmcxHhSfEoRyr0nP/YdoesEtU+uSRvMe96TW/HPTtkoKqQLl53N7UXMQ==}
++
+   '@types/stack-utils@2.0.3':
+     resolution: {integrity: sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==}
+ 
++  '@types/uuid@10.0.0':
++    resolution: {integrity: sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ==}
++
+   '@types/ws@8.5.13':
+     resolution: {integrity: sha512-osM/gWBTPKgHV8XkTunnegTRIsvF6owmf5w+JtAfOw472dptdm0dlGv4xCt6GwQRcC2XVOvvRE/0bAoQcL2QkA==}
+ 
+@@ -1563,6 +1614,7 @@ packages:
+ 
+   libsql@0.4.7:
+     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
++    cpu: [x64, arm64, wasm32]
+     os: [darwin, linux, win32]
+ 
+   lines-and-columns@1.2.4:
+@@ -2218,6 +2270,10 @@ packages:
+     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
+     engines: {node: '>= 0.4.0'}
+ 
++  uuid@11.1.0:
++    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
++    hasBin: true
++
+   v8-compile-cache-lib@3.0.1:
+     resolution: {integrity: sha512-wa7YjyUGfNZngI/vtK0UHAN+lgDCxBPCylVXGp0zu59Fz5aiGtNXaq3DhIov063MorB+VfufLh3JlF2KdTK3xg==}
+ 
+@@ -3077,10 +3133,38 @@ snapshots:
+     dependencies:
+       '@babel/types': 7.26.5
+ 
++  '@types/body-parser@1.19.6':
++    dependencies:
++      '@types/connect': 3.4.38
++      '@types/node': 22.13.8
++
++  '@types/connect@3.4.38':
++    dependencies:
++      '@types/node': 22.13.8
++
++  '@types/cors@2.8.19':
++    dependencies:
++      '@types/node': 22.13.8
++
++  '@types/express-serve-static-core@5.1.0':
++    dependencies:
++      '@types/node': 22.13.8
++      '@types/qs': 6.14.0
++      '@types/range-parser': 1.2.7
++      '@types/send': 1.2.1
++
++  '@types/express@5.0.6':
++    dependencies:
++      '@types/body-parser': 1.19.6
++      '@types/express-serve-static-core': 5.1.0
++      '@types/serve-static': 2.2.0
++
+   '@types/graceful-fs@4.1.9':
+     dependencies:
+       '@types/node': 22.13.8
+ 
++  '@types/http-errors@2.0.5': {}
++
+   '@types/istanbul-lib-coverage@2.0.6': {}
+ 
+   '@types/istanbul-lib-report@3.0.3':
+@@ -3104,8 +3188,23 @@ snapshots:
+     dependencies:
+       undici-types: 6.20.0
+ 
++  '@types/qs@6.14.0': {}
++
++  '@types/range-parser@1.2.7': {}
++
++  '@types/send@1.2.1':
++    dependencies:
++      '@types/node': 22.13.8
++
++  '@types/serve-static@2.2.0':
++    dependencies:
++      '@types/http-errors': 2.0.5
++      '@types/node': 22.13.8
++
+   '@types/stack-utils@2.0.3': {}
+ 
++  '@types/uuid@10.0.0': {}
++
+   '@types/ws@8.5.13':
+     dependencies:
+       '@types/node': 22.13.8
+@@ -4877,6 +4976,8 @@ snapshots:
+ 
+   utils-merge@1.0.1: {}
+ 
++  uuid@11.1.0: {}
++
+   v8-compile-cache-lib@3.0.1: {}
+ 
+   v8-to-istanbul@9.3.0:
+diff --git a/src/db/core.ts b/src/db/core.ts
+index 4e70101..64b9def 100644
+--- a/src/db/core.ts
++++ b/src/db/core.ts
+@@ -96,7 +96,6 @@ export class DatabaseManager {
+ 					CREATE TABLE IF NOT EXISTS entities (
+ 						name TEXT PRIMARY KEY,
+ 						entity_type TEXT NOT NULL,
+-						embedding F32_BLOB(${EMBEDDING_DIMENSION}), -- Using configurable dimension
+ 						created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+ 					)
+ 				`
+@@ -108,6 +107,7 @@ export class DatabaseManager {
+ 						id INTEGER PRIMARY KEY AUTOINCREMENT,
+ 						entity_name TEXT NOT NULL,
+ 						content TEXT NOT NULL,
++						embedding F32_BLOB(${EMBEDDING_DIMENSION}),
+ 						created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+ 						FOREIGN KEY (entity_name) REFERENCES entities(name)
+ 					)
+@@ -148,7 +148,7 @@ export class DatabaseManager {
+ 						args: [],
+ 					},
+ 					{
+-						sql: 'CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))',
++						sql: 'CREATE INDEX IF NOT EXISTS idx_observations_embedding ON observations(libsql_vector_idx(embedding))',
+ 						args: [],
+ 					},
+ 				],
+@@ -164,7 +164,7 @@ export class DatabaseManager {
+ 	}
+ 
+ 	/**
+-	 * Creates or updates entities with observations and optional embeddings
++	 * Creates or updates entities with observations (embeddings auto-generated per observation)
+ 	 * @param entities - Array of entities to create or update
+ 	 */
+ 	async create_entities(
+@@ -172,7 +172,6 @@ export class DatabaseManager {
+ 			name: string;
+ 			entityType: string;
+ 			observations: string[];
+-			embedding?: number[];
+ 		}>,
+ 	): Promise<void> {
+ 		return createEntities(entities);
+@@ -182,47 +181,42 @@ export class DatabaseManager {
+ 	 * Searches for entities by similarity to the provided embedding vector
+ 	 * @param embedding - Vector embedding to search with
+ 	 * @param limit - Maximum number of results to return
+-	 * @param includeEmbeddings - Whether to include embeddings in the returned entities (default: false)
+ 	 * @returns Array of search results with entities and distance scores
+ 	 */
+ 	async search_similar(
+ 		embedding: number[],
+ 		limit: number = 5,
+-		includeEmbeddings: boolean = false,
+ 	): Promise<SearchResult[]> {
+ 		const client = this.getClient();
+-		return searchSimilar(client, embedding, limit, includeEmbeddings);
++		return searchSimilar(client, embedding, limit);
+ 	}
+ 
+ 	/**
+ 	 * Gets an entity by name
+ 	 * @param name - Name of the entity to retrieve
+-	 * @param includeEmbeddings - Whether to include embeddings in the returned entity (default: false)
+-	 * @returns Entity object with observations and optional embedding
++	 * @returns Entity object with observations
+ 	 */
+-	async get_entity(name: string, includeEmbeddings: boolean = false): Promise<Entity> {
+-		return getEntity(name, includeEmbeddings);
++	async get_entity(name: string): Promise<Entity> {
++		return getEntity(name);
+ 	}
+ 
+ 	/**
+ 	 * Searches for entities by text query in name, type, or observations
+ 	 * @param query - Text query to search for
+-	 * @param includeEmbeddings - Whether to include embeddings in the returned entities (default: false)
+ 	 * @returns Array of matching entities
+ 	 */
+-	async search_entities(query: string, includeEmbeddings: boolean = false): Promise<Entity[]> {
++	async search_entities(query: string): Promise<Entity[]> {
+ 		const client = this.getClient();
+-		return searchEntities(client, query, includeEmbeddings);
++		return searchEntities(client, query);
+ 	}
+ 
+ 	/**
+ 	 * Gets the most recently created entities
+ 	 * @param limit - Maximum number of entities to return
+-	 * @param includeEmbeddings - Whether to include embeddings in the returned entities (default: false)
+ 	 * @returns Array of recent entities
+ 	 */
+-	async get_recent_entities(limit = 10, includeEmbeddings: boolean = false): Promise<Entity[]> {
+-		return getRecentEntities(limit, includeEmbeddings);
++	async get_recent_entities(limit = 10): Promise<Entity[]> {
++		return getRecentEntities(limit);
+ 	}
+ 
+ 	/**
+@@ -269,27 +263,24 @@ export class DatabaseManager {
+ 
+ 	/**
+ 	 * Reads the recent entities and their relations to form a graph
+-	 * @param includeEmbeddings - Whether to include embeddings in the returned entities (default: false)
+ 	 * @returns Graph result with entities and relations
+ 	 */
+-	async read_graph(includeEmbeddings: boolean = false): Promise<{
++	async read_graph(): Promise<{
+ 		entities: Entity[];
+ 		relations: Relation[];
+ 	}> {
+-		return readGraph(10, includeEmbeddings);
++		return readGraph(10);
+ 	}
+ 
+ 	/**
+ 	 * Searches for nodes in the graph by text query or vector similarity
+ 	 * @param query - Text query or vector embedding for search
+-	 * @param includeEmbeddings - Whether to include embeddings in the returned entities (default: false)
+ 	 * @returns Graph result with matching entities and their relations
+ 	 */
+ 	async search_nodes(
+ 		query: string | number[],
+-		includeEmbeddings: boolean = false,
+ 	): Promise<{ entities: Entity[]; relations: Relation[] }> {
+-		return searchNodes(query, includeEmbeddings);
++		return searchNodes(query);
+ 	}
+ 
+ 	/**
+@@ -304,4 +295,4 @@ export class DatabaseManager {
+ 	}
+ }
+ 
+-export type { DatabaseConfig };
+\ No newline at end of file
++export type { DatabaseConfig };
+diff --git a/src/db/index.ts b/src/db/index.ts
+index 3b26a2e..1c3dea5 100644
+--- a/src/db/index.ts
++++ b/src/db/index.ts
+@@ -54,15 +54,13 @@ export const searchSimilar = async (
+ 	client: any,
+ 	embedding: number[],
+ 	limit: number = 5,
+-	includeEmbeddings: boolean = false,
+ ): Promise<any[]> => {
+ 	// This is a compatibility wrapper that adapts the new service API to the old function signature
+-	const { databaseService } = await import('../services/database-service.js');
+ 	const { searchNodes } = await import('../services/graph-service.js');
+-	
++
+ 	// Use the searchNodes function with the vector embedding
+-	const result = await searchNodes(embedding, includeEmbeddings);
+-	
++	const result = await searchNodes(embedding);
++
+ 	// Convert the result to the format expected by the old API
+ 	return result.entities.map(entity => ({
+ 		entity,
+@@ -74,14 +72,13 @@ export const searchSimilar = async (
+ export const searchEntities = async (
+ 	client: any,
+ 	query: string,
+-	includeEmbeddings: boolean = false,
+ ): Promise<any[]> => {
+ 	// This is a compatibility wrapper that adapts the new service API to the old function signature
+ 	const { searchNodes } = await import('../services/graph-service.js');
+-	
++
+ 	// Use the searchNodes function with the text query
+-	const result = await searchNodes(query, includeEmbeddings);
+-	
++	const result = await searchNodes(query);
++
+ 	// Return just the entities
+ 	return result.entities;
+ };
+\ No newline at end of file
+diff --git a/src/db/migrations/add-embedding-column.ts b/src/db/migrations/add-embedding-column.ts
+new file mode 100644
+index 0000000..91f024e
+--- /dev/null
++++ b/src/db/migrations/add-embedding-column.ts
+@@ -0,0 +1,182 @@
++#!/usr/bin/env node
++/**
++ * Migration script to add the embedding column to an existing database
++ * that was created without it.
++ *
++ * Usage: node --loader ts-node/esm src/db/migrations/add-embedding-column.ts
++ *
++ * Set DATABASE_URL environment variable or it will use the default from config.
++ */
++import { createClient } from '@libsql/client';
++import { config } from 'dotenv';
++
++// Load environment variables
++config();
++
++const DATABASE_URL = process.env.DATABASE_URL || 'file:memory.db';
++const DATABASE_AUTH_TOKEN = process.env.DATABASE_AUTH_TOKEN;
++const EMBEDDING_DIMENSION = 384;
++
++async function addEmbeddingColumn() {
++    console.log('Starting migration to add embedding column...');
++    console.log(`Database URL: ${DATABASE_URL}`);
++    console.log(`Embedding dimension: ${EMBEDDING_DIMENSION}`);
++
++    const client = createClient({
++        url: DATABASE_URL,
++        authToken: DATABASE_AUTH_TOKEN,
++    });
++
++    try {
++        // Check current schema
++        console.log('\nChecking current schema...');
++        const tables = await client.execute(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`);
++        console.log('Existing tables:', tables.rows.map(r => r.name).join(', '));
++
++        // Check if entities table exists
++        const entitiesExists = tables.rows.some(r => r.name === 'entities');
++        if (!entitiesExists) {
++            console.log('\nNo entities table found. Creating fresh schema...');
++            await createFreshSchema(client);
++            return;
++        }
++
++        // Check if embedding column already exists
++        const columns = await client.execute(`PRAGMA table_info(entities)`);
++        const hasEmbedding = columns.rows.some(r => r.name === 'embedding');
++
++        if (hasEmbedding) {
++            console.log('\nEmbedding column already exists. Checking if dimension needs update...');
++            // Could add dimension check here if needed
++            console.log('Migration not needed - embedding column already exists.');
++            return;
++        }
++
++        console.log('\nEmbedding column not found. Migrating schema...');
++        await migrateSchema(client);
++
++        console.log('\nMigration completed successfully!');
++        console.log('Note: Existing entities will need their embeddings regenerated.');
++        console.log('Run: npm run regenerate:embeddings');
++
++    } catch (error) {
++        console.error('\nMigration failed:', error);
++        if (error instanceof Error) {
++            console.error('Message:', error.message);
++            console.error('Stack:', error.stack);
++        }
++        process.exit(1);
++    } finally {
++        client.close();
++    }
++}
++
++async function createFreshSchema(client: ReturnType<typeof createClient>) {
++    console.log('Creating entities table...');
++    await client.execute(`
++        CREATE TABLE entities (
++            name TEXT PRIMARY KEY,
++            entity_type TEXT NOT NULL,
++            embedding F32_BLOB(${EMBEDDING_DIMENSION}),
++            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
++        )
++    `);
++
++    console.log('Creating observations table...');
++    await client.execute(`
++        CREATE TABLE IF NOT EXISTS observations (
++            id INTEGER PRIMARY KEY AUTOINCREMENT,
++            entity_name TEXT NOT NULL,
++            content TEXT NOT NULL,
++            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
++            FOREIGN KEY (entity_name) REFERENCES entities(name)
++        )
++    `);
++
++    console.log('Creating relations table...');
++    await client.execute(`
++        CREATE TABLE IF NOT EXISTS relations (
++            id INTEGER PRIMARY KEY AUTOINCREMENT,
++            source TEXT NOT NULL,
++            target TEXT NOT NULL,
++            relation_type TEXT NOT NULL,
++            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
++            FOREIGN KEY (source) REFERENCES entities(name),
++            FOREIGN KEY (target) REFERENCES entities(name)
++        )
++    `);
++
++    console.log('Creating indexes...');
++    await client.execute(`CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name)`);
++    await client.execute(`CREATE INDEX IF NOT EXISTS idx_observations_entity ON observations(entity_name)`);
++    await client.execute(`CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(source)`);
++    await client.execute(`CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target)`);
++    await client.execute(`CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))`);
++
++    console.log('Fresh schema created successfully!');
++}
++
++async function migrateSchema(client: ReturnType<typeof createClient>) {
++    // Disable foreign keys BEFORE starting transaction (PRAGMA doesn't work inside transactions)
++    console.log('Disabling foreign key constraints...');
++    await client.execute(`PRAGMA foreign_keys = OFF`);
++
++    // Use a transaction for the migration
++    const txn = await client.transaction('write');
++
++    try {
++
++        // 2. Create backup tables
++        console.log('Creating backup of entities table...');
++        await txn.execute(`DROP TABLE IF EXISTS entities_backup`);
++        await txn.execute(`CREATE TABLE entities_backup AS SELECT * FROM entities`);
++
++        // 3. Drop original entities table
++        console.log('Dropping original entities table...');
++        await txn.execute(`DROP TABLE entities`);
++
++        // 4. Create new entities table with embedding column
++        console.log(`Creating new entities table with embedding column (${EMBEDDING_DIMENSION} dimensions)...`);
++        await txn.execute(`
++            CREATE TABLE entities (
++                name TEXT PRIMARY KEY,
++                entity_type TEXT NOT NULL,
++                embedding F32_BLOB(${EMBEDDING_DIMENSION}),
++                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
++            )
++        `);
++
++        // 5. Restore data from backup
++        console.log('Restoring data from backup...');
++        await txn.execute(`
++            INSERT INTO entities (name, entity_type, created_at)
++            SELECT name, entity_type, created_at FROM entities_backup
++        `);
++
++        // 6. Create vector index
++        console.log('Creating vector index...');
++        await txn.execute(`CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))`);
++
++        // 7. Drop backup table
++        console.log('Dropping backup table...');
++        await txn.execute(`DROP TABLE entities_backup`);
++
++        // Commit
++        await txn.commit();
++        console.log('Schema migration completed!');
++
++    } catch (error) {
++        console.error('Error during migration, rolling back...');
++        await txn.rollback();
++        throw error;
++    } finally {
++        // Re-enable foreign keys (outside transaction)
++        console.log('Re-enabling foreign key constraints...');
++        await client.execute(`PRAGMA foreign_keys = ON`);
++    }
++}
++
++// Run migration
++addEmbeddingColumn()
++    .then(() => process.exit(0))
++    .catch(() => process.exit(1));
+diff --git a/src/db/migrations/fix-vector-dimension.ts b/src/db/migrations/fix-vector-dimension.ts
+index 8fe433b..ec19814 100644
+--- a/src/db/migrations/fix-vector-dimension.ts
++++ b/src/db/migrations/fix-vector-dimension.ts
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env node
+-import { DatabaseManager } from '../core.js';
++import { createClient } from '@libsql/client';
+ import { databaseConfig } from '../../config/index.js';
+ import { logger } from '../../utils/logger.js';
+ import { EMBEDDING_DIMENSION } from '../../services/embedding-service.js';
+@@ -13,14 +13,20 @@ import { EMBEDDING_DIMENSION } from '../../services/embedding-service.js';
+  * 4. Create new tables with the updated vector dimension
+  * 5. Restore the data from the backup tables (excluding incompatible embeddings)
+  * 6. Re-enable foreign key constraints
++ *
++ * NOTE: This migration bypasses DatabaseManager.initialize() to handle databases
++ * that don't yet have the embedding column.
+  */
+ async function fixVectorDimension() {
+     logger.info('Starting vector dimension fix...');
+-    
+-    // Get database connection
++
++    // Create database client directly (bypassing DatabaseManager.initialize())
+     const config = databaseConfig;
+-    const dbManager = await DatabaseManager.getInstance(config);
+-    const client = dbManager.getClient();
++    logger.info(`Connecting to database: ${config.url}`);
++    const client = createClient({
++        url: config.url,
++        authToken: config.authToken,
++    });
+     
+     try {
+         // Start transaction
+@@ -29,151 +35,101 @@ async function fixVectorDimension() {
+         try {
+             // 1. Disable foreign key constraints
+             logger.info('Disabling foreign key constraints...');
+-            await txn.execute({
+-                sql: `PRAGMA foreign_keys = OFF;`
+-            });
+-            
++            await txn.execute('PRAGMA foreign_keys = OFF');
++
+             // 2. Check if backup tables exist and drop them if they do
+             logger.info('Checking for existing backup tables...');
+-            await txn.execute({
+-                sql: `DROP TABLE IF EXISTS entities_backup`
+-            });
+-            await txn.execute({
+-                sql: `DROP TABLE IF EXISTS observations_backup`
+-            });
+-            await txn.execute({
+-                sql: `DROP TABLE IF EXISTS relations_backup`
+-            });
+-            
++            await txn.execute('DROP TABLE IF EXISTS entities_backup');
++            await txn.execute('DROP TABLE IF EXISTS observations_backup');
++            await txn.execute('DROP TABLE IF EXISTS relations_backup');
++
+             // 3. Create backups of all tables
+             logger.info('Creating backup of entities table...');
+-            await txn.execute({
+-                sql: `CREATE TABLE entities_backup AS SELECT * FROM entities`
+-            });
+-            
++            await txn.execute('CREATE TABLE entities_backup AS SELECT * FROM entities');
++
+             logger.info('Creating backup of observations table...');
+-            await txn.execute({
+-                sql: `CREATE TABLE observations_backup AS SELECT * FROM observations`
+-            });
+-            
++            await txn.execute('CREATE TABLE observations_backup AS SELECT * FROM observations');
++
+             logger.info('Creating backup of relations table...');
+-            await txn.execute({
+-                sql: `CREATE TABLE relations_backup AS SELECT * FROM relations`
+-            });
+-            
++            await txn.execute('CREATE TABLE relations_backup AS SELECT * FROM relations');
++
+             // 4. Drop existing tables in the correct order (respecting foreign key relationships)
+             logger.info('Dropping existing tables...');
+-            await txn.execute({
+-                sql: `DROP TABLE IF EXISTS observations`
+-            });
+-            await txn.execute({
+-                sql: `DROP TABLE IF EXISTS relations`
+-            });
+-            await txn.execute({
+-                sql: `DROP TABLE IF EXISTS entities`
+-            });
+-            
++            await txn.execute('DROP TABLE IF EXISTS observations');
++            await txn.execute('DROP TABLE IF EXISTS relations');
++            await txn.execute('DROP TABLE IF EXISTS entities');
++
+             // 5. Create new tables with updated vector dimension
+             logger.info(`Creating new entities table with ${EMBEDDING_DIMENSION} dimensions...`);
+-            await txn.execute({
+-                sql: `
+-                    CREATE TABLE entities (
+-                        name TEXT PRIMARY KEY,
+-                        entity_type TEXT NOT NULL,
+-                        embedding F32_BLOB(${EMBEDDING_DIMENSION}), -- Updated dimension
+-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+-                    )
+-                `
+-            });
+-            
++            await txn.execute(`
++                CREATE TABLE entities (
++                    name TEXT PRIMARY KEY,
++                    entity_type TEXT NOT NULL,
++                    embedding F32_BLOB(${EMBEDDING_DIMENSION}),
++                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
++                )
++            `);
++
+             logger.info('Creating new observations table...');
+-            await txn.execute({
+-                sql: `
+-                    CREATE TABLE observations (
+-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+-                        entity_name TEXT NOT NULL,
+-                        content TEXT NOT NULL,
+-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+-                        FOREIGN KEY (entity_name) REFERENCES entities(name)
+-                    )
+-                `
+-            });
+-            
++            await txn.execute(`
++                CREATE TABLE observations (
++                    id INTEGER PRIMARY KEY AUTOINCREMENT,
++                    entity_name TEXT NOT NULL,
++                    content TEXT NOT NULL,
++                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
++                    FOREIGN KEY (entity_name) REFERENCES entities(name)
++                )
++            `);
++
+             logger.info('Creating new relations table...');
+-            await txn.execute({
+-                sql: `
+-                    CREATE TABLE relations (
+-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+-                        source TEXT NOT NULL,
+-                        target TEXT NOT NULL,
+-                        relation_type TEXT NOT NULL,
+-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+-                        FOREIGN KEY (source) REFERENCES entities(name),
+-                        FOREIGN KEY (target) REFERENCES entities(name)
+-                    )
+-                `
+-            });
+-            
++            await txn.execute(`
++                CREATE TABLE relations (
++                    id INTEGER PRIMARY KEY AUTOINCREMENT,
++                    source TEXT NOT NULL,
++                    target TEXT NOT NULL,
++                    relation_type TEXT NOT NULL,
++                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
++                    FOREIGN KEY (source) REFERENCES entities(name),
++                    FOREIGN KEY (target) REFERENCES entities(name)
++                )
++            `);
++
+             // 6. Restore data from backups (excluding embeddings as they're incompatible)
+             logger.info('Restoring entities data from backup (without embeddings)...');
+-            await txn.execute({
+-                sql: `
+-                    INSERT INTO entities (name, entity_type, created_at)
+-                    SELECT name, entity_type, created_at FROM entities_backup
+-                `
+-            });
+-            
++            await txn.execute(`
++                INSERT INTO entities (name, entity_type, created_at)
++                SELECT name, entity_type, created_at FROM entities_backup
++            `);
++
+             logger.info('Restoring observations data from backup...');
+-            await txn.execute({
+-                sql: `
+-                    INSERT INTO observations (entity_name, content, created_at)
+-                    SELECT entity_name, content, created_at FROM observations_backup
+-                `
+-            });
+-            
++            await txn.execute(`
++                INSERT INTO observations (entity_name, content, created_at)
++                SELECT entity_name, content, created_at FROM observations_backup
++            `);
++
+             logger.info('Restoring relations data from backup...');
+-            await txn.execute({
+-                sql: `
+-                    INSERT INTO relations (source, target, relation_type, created_at)
+-                    SELECT source, target, relation_type, created_at FROM relations_backup
+-                `
+-            });
+-            
++            await txn.execute(`
++                INSERT INTO relations (source, target, relation_type, created_at)
++                SELECT source, target, relation_type, created_at FROM relations_backup
++            `);
++
+             // 7. Recreate indexes
+             logger.info('Recreating indexes...');
+-            await txn.execute({
+-                sql: 'CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name)'
+-            });
+-            await txn.execute({
+-                sql: 'CREATE INDEX IF NOT EXISTS idx_observations_entity ON observations(entity_name)'
+-            });
+-            await txn.execute({
+-                sql: 'CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(source)'
+-            });
+-            await txn.execute({
+-                sql: 'CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target)'
+-            });
+-            await txn.execute({
+-                sql: 'CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))'
+-            });
+-            
++            await txn.execute('CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name)');
++            await txn.execute('CREATE INDEX IF NOT EXISTS idx_observations_entity ON observations(entity_name)');
++            await txn.execute('CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(source)');
++            await txn.execute('CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target)');
++            await txn.execute('CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))');
++
+             // 8. Re-enable foreign key constraints
+             logger.info('Re-enabling foreign key constraints...');
+-            await txn.execute({
+-                sql: `PRAGMA foreign_keys = ON;`
+-            });
+-            
++            await txn.execute('PRAGMA foreign_keys = ON');
++
+             // 9. Drop backup tables
+             logger.info('Dropping backup tables...');
+-            await txn.execute({
+-                sql: `DROP TABLE entities_backup`
+-            });
+-            await txn.execute({
+-                sql: `DROP TABLE observations_backup`
+-            });
+-            await txn.execute({
+-                sql: `DROP TABLE relations_backup`
+-            });
++            await txn.execute('DROP TABLE entities_backup');
++            await txn.execute('DROP TABLE observations_backup');
++            await txn.execute('DROP TABLE relations_backup');
+             
+             // Commit transaction
+             await txn.commit();
+@@ -185,11 +141,15 @@ async function fixVectorDimension() {
+             throw error;
+         }
+     } catch (error) {
+-        logger.error('Migration failed:', error);
++        console.error('Migration failed with error:', error);
++        if (error instanceof Error) {
++            console.error('Error message:', error.message);
++            console.error('Error stack:', error.stack);
++        }
+         throw new Error(`Vector dimension fix failed: ${error instanceof Error ? error.message : String(error)}`);
+     } finally {
+         // Close database connection
+-        await dbManager.close();
++        client.close();
+     }
+ }
+ 
+diff --git a/src/db/migrations/migrate-embeddings-to-observations.ts b/src/db/migrations/migrate-embeddings-to-observations.ts
+new file mode 100644
+index 0000000..24216b3
+--- /dev/null
++++ b/src/db/migrations/migrate-embeddings-to-observations.ts
+@@ -0,0 +1,212 @@
++#!/usr/bin/env node
++import { createClient } from '@libsql/client';
++import { databaseConfig } from '../../config/index.js';
++import { logger } from '../../utils/logger.js';
++import { embeddingService, EMBEDDING_DIMENSION } from '../../services/embedding-service.js';
++import { arrayToVectorString } from '../../services/vector-service.js';
++
++/**
++ * Migration script to move embeddings from entities to observations
++ *
++ * This migration:
++ * 1. Removes the embedding column from the entities table
++ * 2. Adds an embedding column to the observations table
++ * 3. Generates embeddings for each observation
++ *
++ * NOTE: This migration uses createClient directly to handle databases
++ * that may have different schemas.
++ */
++async function migrateEmbeddingsToObservations() {
++    logger.info('Starting migration: Moving embeddings from entities to observations...');
++    logger.info(`Using embedding dimension: ${EMBEDDING_DIMENSION}`);
++
++    // Create database client directly (bypassing DatabaseService.initialize())
++    const config = databaseConfig;
++    logger.info(`Connecting to database: ${config.url}`);
++    const client = createClient({
++        url: config.url,
++        authToken: config.authToken,
++    });
++
++    try {
++        // Step 1: Disable foreign key constraints
++        logger.info('Step 1: Disabling foreign key constraints...');
++        await client.execute('PRAGMA foreign_keys = OFF');
++
++        // Start a transaction for schema changes
++        const txn = await client.transaction('write');
++
++        try {
++            // Step 2: Check current schema state
++            logger.info('Step 2: Checking current schema state...');
++            const entitiesInfo = await txn.execute("PRAGMA table_info(entities)");
++            const observationsInfo = await txn.execute("PRAGMA table_info(observations)");
++
++            const entitiesHasEmbedding = entitiesInfo.rows.some((row: any) => row.name === 'embedding');
++            const observationsHasEmbedding = observationsInfo.rows.some((row: any) => row.name === 'embedding');
++
++            logger.info(`Entities table has embedding column: ${entitiesHasEmbedding}`);
++            logger.info(`Observations table has embedding column: ${observationsHasEmbedding}`);
++
++            // Step 3: Create backup tables
++            logger.info('Step 3: Creating backup tables...');
++            await txn.execute('DROP TABLE IF EXISTS entities_backup');
++            await txn.execute('DROP TABLE IF EXISTS observations_backup');
++            await txn.execute('DROP TABLE IF EXISTS relations_backup');
++
++            await txn.execute('CREATE TABLE entities_backup AS SELECT * FROM entities');
++            await txn.execute('CREATE TABLE observations_backup AS SELECT * FROM observations');
++            await txn.execute('CREATE TABLE relations_backup AS SELECT * FROM relations');
++
++            // Step 4: Drop existing tables
++            logger.info('Step 4: Dropping existing tables...');
++            await txn.execute('DROP TABLE IF EXISTS observations');
++            await txn.execute('DROP TABLE IF EXISTS relations');
++            await txn.execute('DROP TABLE IF EXISTS entities');
++
++            // Step 5: Create new entities table WITHOUT embedding
++            logger.info('Step 5: Creating new entities table (without embedding)...');
++            await txn.execute(`
++                CREATE TABLE entities (
++                    name TEXT PRIMARY KEY,
++                    entity_type TEXT NOT NULL,
++                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
++                )
++            `);
++
++            // Step 6: Create new observations table WITH embedding
++            logger.info('Step 6: Creating new observations table (with embedding)...');
++            await txn.execute(`
++                CREATE TABLE observations (
++                    id INTEGER PRIMARY KEY AUTOINCREMENT,
++                    entity_name TEXT NOT NULL,
++                    content TEXT NOT NULL,
++                    embedding F32_BLOB(${EMBEDDING_DIMENSION}),
++                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
++                    FOREIGN KEY (entity_name) REFERENCES entities(name)
++                )
++            `);
++
++            // Step 7: Create new relations table
++            logger.info('Step 7: Creating new relations table...');
++            await txn.execute(`
++                CREATE TABLE relations (
++                    id INTEGER PRIMARY KEY AUTOINCREMENT,
++                    source TEXT NOT NULL,
++                    target TEXT NOT NULL,
++                    relation_type TEXT NOT NULL,
++                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
++                    FOREIGN KEY (source) REFERENCES entities(name),
++                    FOREIGN KEY (target) REFERENCES entities(name)
++                )
++            `);
++
++            // Step 8: Restore entities data (without embedding)
++            logger.info('Step 8: Restoring entities data...');
++            await txn.execute(`
++                INSERT INTO entities (name, entity_type, created_at)
++                SELECT name, entity_type, created_at FROM entities_backup
++            `);
++
++            // Step 9: Restore observations data (without embedding for now)
++            logger.info('Step 9: Restoring observations data...');
++            await txn.execute(`
++                INSERT INTO observations (entity_name, content, created_at)
++                SELECT entity_name, content, created_at FROM observations_backup
++            `);
++
++            // Step 10: Restore relations data
++            logger.info('Step 10: Restoring relations data...');
++            await txn.execute(`
++                INSERT INTO relations (source, target, relation_type, created_at)
++                SELECT source, target, relation_type, created_at FROM relations_backup
++            `);
++
++            // Step 11: Recreate indexes
++            logger.info('Step 11: Recreating indexes...');
++            await txn.execute('CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name)');
++            await txn.execute('CREATE INDEX IF NOT EXISTS idx_observations_entity ON observations(entity_name)');
++            await txn.execute('CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(source)');
++            await txn.execute('CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target)');
++            await txn.execute('CREATE INDEX IF NOT EXISTS idx_observations_embedding ON observations(libsql_vector_idx(embedding))');
++
++            // Step 12: Drop backup tables
++            logger.info('Step 12: Dropping backup tables...');
++            await txn.execute('DROP TABLE entities_backup');
++            await txn.execute('DROP TABLE observations_backup');
++            await txn.execute('DROP TABLE relations_backup');
++
++            // Commit transaction
++            await txn.commit();
++            logger.info('Schema migration completed successfully!');
++
++        } catch (error) {
++            await txn.rollback();
++            throw error;
++        }
++
++        // Step 13: Re-enable foreign key constraints
++        logger.info('Step 13: Re-enabling foreign key constraints...');
++        await client.execute('PRAGMA foreign_keys = ON');
++
++        // Step 14: Generate embeddings for observations
++        logger.info('Step 14: Generating embeddings for observations...');
++        const observations = await client.execute('SELECT id, content FROM observations WHERE embedding IS NULL');
++        const totalObservations = observations.rows.length;
++        logger.info(`Found ${totalObservations} observations needing embeddings`);
++
++        let successCount = 0;
++        let errorCount = 0;
++
++        for (let i = 0; i < totalObservations; i++) {
++            const row = observations.rows[i] as unknown as { id: number; content: string };
++            const id = row.id;
++            const content = row.content;
++
++            try {
++                const embedding = await embeddingService.generateEmbedding(content);
++                const vectorString = arrayToVectorString(embedding);
++
++                await client.execute({
++                    sql: 'UPDATE observations SET embedding = vector32(?) WHERE id = ?',
++                    args: [vectorString, id],
++                });
++
++                successCount++;
++            } catch (error) {
++                logger.error(`Failed to generate embedding for observation ${id}:`, error);
++                errorCount++;
++            }
++
++            // Log progress every 10 observations
++            if ((i + 1) % 10 === 0 || i === totalObservations - 1) {
++                logger.info(`Progress: ${i + 1}/${totalObservations} observations (${successCount} success, ${errorCount} failed)`);
++            }
++        }
++
++        logger.info(`Embedding generation complete: ${successCount} succeeded, ${errorCount} failed`);
++        logger.info('Migration completed successfully!');
++
++    } catch (error) {
++        console.error('Migration failed with error:', error);
++        if (error instanceof Error) {
++            console.error('Error message:', error.message);
++            console.error('Error stack:', error.stack);
++        }
++        throw new Error(`Migration failed: ${error instanceof Error ? error.message : String(error)}`);
++    } finally {
++        // Close database connection
++        client.close();
++    }
++}
++
++// Run migration
++migrateEmbeddingsToObservations()
++    .then(() => {
++        logger.info('Migration completed successfully');
++        process.exit(0);
++    })
++    .catch((error) => {
++        logger.error('Migration failed:', error);
++        process.exit(1);
++    });
+diff --git a/src/db/migrations/regenerate-embeddings-after-migration.ts b/src/db/migrations/regenerate-embeddings-after-migration.ts
+index 4177565..0a77216 100644
+--- a/src/db/migrations/regenerate-embeddings-after-migration.ts
++++ b/src/db/migrations/regenerate-embeddings-after-migration.ts
+@@ -44,21 +44,15 @@ async function regenerateEmbeddingsAfterMigration() {
+                     continue;
+                 }
+                 
+-                // Generate embedding from observations
+-                logger.info(`Generating embedding for entity "${entityName}" using ${embeddingService.getModelName()}`);
+-                const text = observations.join(' ');
+-                const embedding = await embeddingService.generateEmbedding(text);
+-                logger.info(`Successfully generated embedding with dimension: ${embedding.length}`);
+-                
+-                // Update entity with new embedding
++                // Update entity - embeddings are now auto-generated per observation
++                logger.info(`Updating entity "${entityName}" to regenerate per-observation embeddings`);
+                 await dbManager.create_entities([{
+                     name: entityName,
+                     entityType: entityType,
+                     observations: observations,
+-                    embedding: embedding
+                 }]);
+-                
+-                logger.info(`Successfully updated embedding for entity "${entityName}"`);
++
++                logger.info(`Successfully updated entity "${entityName}" with auto-generated embeddings`);
+                 successCount++;
+                 
+             } catch (error) {
+diff --git a/src/db/migrations/run.ts b/src/db/migrations/run.ts
+index c4b6eab..cff7e8e 100644
+--- a/src/db/migrations/run.ts
++++ b/src/db/migrations/run.ts
+@@ -1,6 +1,7 @@
+ import { DatabaseManager } from '../index.js';
+ import { databaseConfig } from '../../config/index.js';
+ import { schema } from './schema.js';
++import { fileURLToPath } from 'url';
+ 
+ async function run_migrations() {
+ 	const config = databaseConfig;
+@@ -22,8 +23,9 @@ async function run_migrations() {
+ 	}
+ }
+ 
+-// Run migrations if this file is executed directly
+-if (require.main === module) {
++// Run migrations if this file is executed directly (ESM compatible)
++const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
++if (isMainModule) {
+ 	run_migrations()
+ 		.then(() => process.exit(0))
+ 		.catch((error) => {
+diff --git a/src/db/migrations/schema.ts b/src/db/migrations/schema.ts
+index b869351..82e97ff 100644
+--- a/src/db/migrations/schema.ts
++++ b/src/db/migrations/schema.ts
+@@ -1,17 +1,17 @@
+ export const schema = [
+-	// Create entities table
++	// Create entities table (no embedding - embeddings are on observations)
+ 	`CREATE TABLE IF NOT EXISTS entities (
+     name TEXT PRIMARY KEY,
+     entity_type TEXT NOT NULL,
+-    embedding F32_BLOB(384), -- 4 dimensions for testing
+     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+   )`,
+ 
+-	// Create observations table
++	// Create observations table with embedding for semantic search
+ 	`CREATE TABLE IF NOT EXISTS observations (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     entity_name TEXT NOT NULL,
+     content TEXT NOT NULL,
++    embedding F32_BLOB(384),
+     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+     FOREIGN KEY (entity_name) REFERENCES entities(name)
+   )`,
+@@ -33,6 +33,6 @@ export const schema = [
+ 	`CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(source)`,
+ 	`CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target)`,
+ 
+-	// Create vector index for similarity search
+-	`CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))`,
++	// Create vector index for similarity search on observations
++	`CREATE INDEX IF NOT EXISTS idx_observations_embedding ON observations(libsql_vector_idx(embedding))`,
+ ];
+diff --git a/src/db/migrations/update-vector-dimension.ts b/src/db/migrations/update-vector-dimension.ts
+index 0fecccd..54c43b2 100644
+--- a/src/db/migrations/update-vector-dimension.ts
++++ b/src/db/migrations/update-vector-dimension.ts
+@@ -1,9 +1,4 @@
+ #!/usr/bin/env node
+-import { DatabaseManager } from '../core.js';
+-import { databaseConfig } from '../../config/index.js';
+-import { logger } from '../../utils/logger.js';
+-import { EMBEDDING_DIMENSION } from '../../services/embedding-service.js';
+-
+ /**
+  * Migration script to update the database schema to support larger vector dimensions
+  * This script will:
+@@ -12,87 +7,94 @@ import { EMBEDDING_DIMENSION } from '../../services/embedding-service.js';
+  * 3. Create a new entities table with the updated vector dimension
+  * 4. Restore the data from the backup table
+  * 5. Drop the backup table
++ *
++ * Usage: npm run migrate:vector-dimension
+  */
++import { createClient } from '@libsql/client';
++import { databaseConfig } from '../../config/index.js';
++import { logger } from '../../utils/logger.js';
++import { EMBEDDING_DIMENSION } from '../../services/embedding-service.js';
++
+ async function migrateVectorDimension() {
+     logger.info('Starting vector dimension migration...');
+-    
+-    // Get database connection
++
++    // Create database client directly (bypassing DatabaseManager.initialize())
+     const config = databaseConfig;
+-    const dbManager = await DatabaseManager.getInstance(config);
+-    const client = dbManager.getClient();
+-    
++    logger.info(`Connecting to database: ${config.url}`);
++    const client = createClient({
++        url: config.url,
++        authToken: config.authToken,
++    });
++
+     try {
++        // Disable foreign keys BEFORE transaction (PRAGMA doesn't work inside transactions)
++        logger.info('Disabling foreign key constraints...');
++        await client.execute('PRAGMA foreign_keys = OFF');
++
+         // Start transaction
+         const txn = await client.transaction('write');
+-        
++
+         try {
+             // 1. Check if backup table exists and drop it if it does
+             logger.info('Checking for existing backup table...');
+-            await txn.execute({
+-                sql: `DROP TABLE IF EXISTS entities_backup`
+-            });
+-            
++            await txn.execute(`DROP TABLE IF EXISTS entities_backup`);
++
+             // 2. Create backup of entities table
+             logger.info('Creating backup of entities table...');
+-            await txn.execute({
+-                sql: `CREATE TABLE entities_backup AS SELECT * FROM entities`
+-            });
+-            
++            await txn.execute(`CREATE TABLE entities_backup AS SELECT * FROM entities`);
++
+             // 3. Drop existing entities table
+             logger.info('Dropping existing entities table...');
+-            await txn.execute({
+-                sql: `DROP TABLE entities`
+-            });
+-            
++            await txn.execute(`DROP TABLE entities`);
++
+             // 4. Create new entities table with updated vector dimension
+             logger.info(`Creating new entities table with ${EMBEDDING_DIMENSION} dimensions...`);
+-            await txn.execute({
+-                sql: `
+-                    CREATE TABLE entities (
+-                        name TEXT PRIMARY KEY,
+-                        entity_type TEXT NOT NULL,
+-                        embedding F32_BLOB(${EMBEDDING_DIMENSION}), -- Updated dimension
+-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+-                    )
+-                `
+-            });
+-            
++            await txn.execute(`
++                CREATE TABLE entities (
++                    name TEXT PRIMARY KEY,
++                    entity_type TEXT NOT NULL,
++                    embedding F32_BLOB(${EMBEDDING_DIMENSION}),
++                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
++                )
++            `);
++
+             // 5. Restore data from backup (excluding embeddings as they're incompatible)
+             logger.info('Restoring data from backup (without embeddings)...');
+-            await txn.execute({
+-                sql: `
+-                    INSERT INTO entities (name, entity_type, created_at)
+-                    SELECT name, entity_type, created_at FROM entities_backup
+-                `
+-            });
+-            
++            await txn.execute(`
++                INSERT INTO entities (name, entity_type, created_at)
++                SELECT name, entity_type, created_at FROM entities_backup
++            `);
++
+             // 6. Recreate index
+             logger.info('Recreating vector index...');
+-            await txn.execute({
+-                sql: 'CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))'
+-            });
+-            
++            await txn.execute(`CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))`);
++
+             // 7. Drop backup table
+             logger.info('Dropping backup table...');
+-            await txn.execute({
+-                sql: `DROP TABLE entities_backup`
+-            });
+-            
++            await txn.execute(`DROP TABLE entities_backup`);
++
+             // Commit transaction
+             await txn.commit();
+             logger.info('Vector dimension migration completed successfully!');
+-            
++
+         } catch (error) {
+             // Rollback transaction on error
+             await txn.rollback();
+             throw error;
+         }
+     } catch (error) {
+-        logger.error('Migration failed:', error);
++        console.error('Migration failed with error:', error);
++        if (error instanceof Error) {
++            console.error('Error message:', error.message);
++            console.error('Error stack:', error.stack);
++        }
+         throw new Error(`Vector dimension migration failed: ${error instanceof Error ? error.message : String(error)}`);
+     } finally {
++        // Re-enable foreign keys
++        logger.info('Re-enabling foreign key constraints...');
++        await client.execute('PRAGMA foreign_keys = ON');
+         // Close database connection
+-        await dbManager.close();
++        client.close();
+     }
+ }
+ 
+@@ -105,4 +107,4 @@ migrateVectorDimension()
+     .catch((error) => {
+         logger.error('Migration failed:', error);
+         process.exit(1);
+-    });
+\ No newline at end of file
++    });
+diff --git a/src/db/regenerate-embeddings.ts b/src/db/regenerate-embeddings.ts
+index 5af2393..b1d45ec 100644
+--- a/src/db/regenerate-embeddings.ts
++++ b/src/db/regenerate-embeddings.ts
+@@ -46,21 +46,15 @@ async function regenerateAllEmbeddings() {
+                     continue;
+                 }
+                 
+-                // Generate embedding from observations
+-                logger.info(`Generating embedding for entity "${entityName}" using ${embeddingService.getModelName()}`);
+-                const text = observations.join(' ');
+-                const embedding = await embeddingService.generateEmbedding(text);
+-                logger.info(`Successfully generated embedding with dimension: ${embedding.length}`);
+-                
+-                // Update entity with new embedding
++                // Update entity - embeddings are now auto-generated per observation
++                logger.info(`Updating entity "${entityName}" to regenerate per-observation embeddings`);
+                 await dbManager.create_entities([{
+                     name: entityName,
+                     entityType: entityType,
+                     observations: observations,
+-                    embedding: embedding
+                 }]);
+-                
+-                logger.info(`Successfully updated embedding for entity "${entityName}"`);
++
++                logger.info(`Successfully updated entity "${entityName}" with auto-generated embeddings`);
+                 successCount++;
+                 
+             } catch (error) {
+diff --git a/src/db/run-vector-query.ts b/src/db/run-vector-query.ts
+new file mode 100644
+index 0000000..45b3a37
+--- /dev/null
++++ b/src/db/run-vector-query.ts
+@@ -0,0 +1,89 @@
++/**
++ * Helper script: generate an embedding for a text string, run the
++ * semantic similarity query used by search_nodes, and print ranked results.
++ *
++ * Usage:
++ *   npm run ts-node -- src/db/run-vector-query.ts "your text here"
++ *   # or with ts-node directly:
++ *   npx ts-node --esm src/db/run-vector-query.ts "your text here"
++ */
++
++import process from 'process';
++import { embeddingService } from '../services/embedding-service.js';
++import { databaseService } from '../services/database-service.js';
++import { logger } from '../utils/logger.js';
++
++// Match the constants used in GraphService.searchByVector (and allow env override)
++const SIMILARITY_THRESHOLD = Number(process.env.SIMILARITY_THRESHOLD ?? '0.4');
++const MAX_RESULTS = Number(process.env.SIMILARITY_MAX_RESULTS ?? '10');
++
++async function main() {
++  const text = process.argv.slice(2).join(' ').trim();
++
++  if (!text) {
++    console.error('Usage: ts-node --esm src/db/run-vector-query.ts "text to search"');
++    process.exit(1);
++  }
++
++  try {
++    // Ensure database schema exists
++    await databaseService.initialize();
++
++    logger.info(`Generating embedding for: "${text}"`);
++    const embedding = await embeddingService.generateEmbedding(text);
++    const vectorString = JSON.stringify(embedding);
++
++    const client = databaseService.getClient();
++
++    const results = await client.execute({
++      sql: `
++        WITH matching_observations AS (
++          SELECT
++            o.entity_name,
++            o.id AS observation_id,
++            vector_distance_cos(o.embedding, vector32(?)) AS distance
++          FROM observations o
++          WHERE o.embedding IS NOT NULL
++            AND vector_distance_cos(o.embedding, vector32(?)) <= ?
++        ),
++        entity_matches AS (
++          SELECT
++            mo.entity_name,
++            COUNT(DISTINCT mo.observation_id) AS match_count,
++            AVG(mo.distance) AS avg_distance
++          FROM matching_observations mo
++          GROUP BY mo.entity_name
++        )
++        SELECT em.entity_name, em.match_count, em.avg_distance
++        FROM entity_matches em
++        ORDER BY em.match_count DESC, em.avg_distance ASC
++        LIMIT ?
++      `,
++      args: [vectorString, vectorString, SIMILARITY_THRESHOLD, MAX_RESULTS],
++    });
++
++    if (results.rows.length === 0) {
++      console.log('No semantic matches found.');
++      return;
++    }
++
++    console.table(
++      results.rows.map((row: any) => ({
++        entity: row.entity_name,
++        matches: Number(row.match_count),
++        avg_distance: Number(row.avg_distance),
++      })),
++    );
++  } catch (error) {
++    console.error('Failed to run semantic query:', error);
++    process.exit(1);
++  } finally {
++    try {
++      await databaseService.close();
++    } catch (closeError) {
++      logger.error('Failed to close database after query:', closeError);
++    }
++  }
++}
++
++main();
+diff --git a/src/db/test-embeddings.ts b/src/db/test-embeddings.ts
+index be2e872..af60fa4 100644
+--- a/src/db/test-embeddings.ts
++++ b/src/db/test-embeddings.ts
+@@ -6,23 +6,24 @@ import { embeddingService } from '../services/embedding-service.js';
+ 
+ /**
+  * Test script to verify the embedding functionality
++ * Embeddings are now auto-generated per observation
+  */
+ async function testEmbeddings() {
+     logger.info('Starting embedding test...');
+-    
++
+     // Get database connection
+     const config = databaseConfig;
+     const dbManager = await DatabaseManager.get_instance(config);
+-    
++
+     try {
+-        // Test 1: Generate an embedding
++        // Test 1: Generate an embedding manually
+         logger.info('Test 1: Generating embedding for test text...');
+         const testText = "This is a test of the embedding functionality";
+         const embedding = await embeddingService.generateEmbedding(testText);
+         logger.info(`Successfully generated embedding with dimension: ${embedding.length}`);
+-        
+-        // Test 2: Create an entity with automatic embedding
+-        logger.info('Test 2: Creating entity with automatic embedding...');
++
++        // Test 2: Create an entity - embeddings are auto-generated per observation
++        logger.info('Test 2: Creating entity (embeddings auto-generated per observation)...');
+         await dbManager.create_entities([
+             {
+                 name: "TestEntityAuto",
+@@ -30,44 +31,47 @@ async function testEmbeddings() {
+                 observations: ["This is a test entity with automatic embedding generation"]
+             }
+         ]);
+-        logger.info('Successfully created entity with automatic embedding');
+-        
+-        // Test 3: Create an entity with explicit embedding
+-        logger.info('Test 3: Creating entity with explicit embedding...');
++        logger.info('Successfully created entity with auto-generated observation embeddings');
++
++        // Test 3: Create another entity with multiple observations
++        logger.info('Test 3: Creating entity with multiple observations...');
+         await dbManager.create_entities([
+             {
+-                name: "TestEntityExplicit",
++                name: "TestEntityMultiple",
+                 entityType: "test",
+-                observations: ["This is a test entity with explicit embedding"],
+-                embedding: embedding
++                observations: [
++                    "First observation for testing",
++                    "Second observation about embeddings",
++                    "Third observation for vector search"
++                ]
+             }
+         ]);
+-        logger.info('Successfully created entity with explicit embedding');
+-        
++        logger.info('Successfully created entity with multiple observations');
++
+         // Test 4: Search for entities using text query
+         logger.info('Test 4: Searching for entities using text query...');
+         const textSearchResults = await dbManager.search_nodes("test entity");
+         logger.info(`Text search found ${textSearchResults.entities.length} entities`);
+-        
++
+         // Test 5: Search for entities using vector query
+         logger.info('Test 5: Searching for entities using vector query...');
+         const vectorSearchResults = await dbManager.search_nodes(embedding);
+         logger.info(`Vector search found ${vectorSearchResults.entities.length} entities`);
+-        
+-        // Test 6: Retrieve and verify entity embeddings
+-        logger.info('Test 6: Retrieving and verifying entity embeddings...');
++
++        // Test 6: Retrieve entity and verify observations
++        logger.info('Test 6: Retrieving and verifying entities...');
+         const entity1 = await dbManager.get_entity("TestEntityAuto");
+-        const entity2 = await dbManager.get_entity("TestEntityExplicit");
+-        
+-        logger.info(`TestEntityAuto embedding dimension: ${entity1.embedding?.length || 'undefined'}`);
+-        logger.info(`TestEntityExplicit embedding dimension: ${entity2.embedding?.length || 'undefined'}`);
+-        
++        const entity2 = await dbManager.get_entity("TestEntityMultiple");
++
++        logger.info(`TestEntityAuto observations: ${entity1.observations.length}`);
++        logger.info(`TestEntityMultiple observations: ${entity2.observations.length}`);
++
+         // Test 7: Clean up test entities
+         logger.info('Test 7: Cleaning up test entities...');
+         await dbManager.delete_entity("TestEntityAuto");
+-        await dbManager.delete_entity("TestEntityExplicit");
++        await dbManager.delete_entity("TestEntityMultiple");
+         logger.info('Successfully deleted test entities');
+-        
++
+         logger.info('All embedding tests completed successfully!');
+     } catch (error) {
+         logger.error('Embedding test failed:', error);
+@@ -87,4 +91,4 @@ testEmbeddings()
+     .catch((error) => {
+         logger.error('Embedding tests failed:', error);
+         process.exit(1);
+-    });
+\ No newline at end of file
++    });
+diff --git a/src/db/test.ts b/src/db/test.ts
+index 49a55c6..1474657 100644
+--- a/src/db/test.ts
++++ b/src/db/test.ts
+@@ -11,63 +11,45 @@
+  * It also verifies backward compatibility with the snake_case interface provided by index.js.
+  */
+ 
+-import { DatabaseManager as CoreDatabaseManager } from './core.js';
+-import { DatabaseManager as LegacyDatabaseManager } from './index.js';
+-import {
+-  createEntities,
+-  searchSimilar,
+-  getEntity,
+-  searchEntities,
+-  getRecentEntities,
+-  deleteEntity
+-} from './index.js';
+-import {
+-  createRelations,
+-  deleteRelation,
+-  getRelationsForEntities
+-} from './index.js';
+-import {
+-  readGraph,
+-  searchNodes
+-} from './index.js';
+-import { arrayToVectorString, extractVector } from './index.js';
+-import { DatabaseConfig } from './types.js';
+-import { EMBEDDING_DIMENSION } from '../services/embedding-service.js';
++import { fileURLToPath } from 'url';
++import { dirname, join } from 'path';
++import { existsSync, rmSync } from 'fs';
++import type { DatabaseConfig } from './types.js';
++
++// Force the test run to use a writable database that lives inside the repo
++// (the default .env may point outside the workspace and be read-only in CI/sandboxed runs).
++const __filename = fileURLToPath(import.meta.url);
++const __dirname = dirname(__filename);
++const repoRoot = join(__dirname, '..', '..');
++const dbFilePath = join(repoRoot, 'memory-test.db');
++
++// Start from a clean test database to avoid stale schemas/data
++if (existsSync(dbFilePath)) {
++  rmSync(dbFilePath);
++}
++
++process.env.DATABASE_URL ??= `file:${dbFilePath}`;
+ 
+ // Test configuration
+ const config: DatabaseConfig = {
+   url: 'file:memory-test.db',
+ };
+ 
+-// Test data
+-// Helper function to generate a test embedding vector of the correct dimension
+-function generateTestEmbedding(seed: number): number[] {
+-  const embedding: number[] = [];
+-  for (let i = 0; i < EMBEDDING_DIMENSION; i++) {
+-    // Generate a value between 0 and 1 based on the seed and position
+-    embedding.push((seed * 0.1 + i * 0.001) % 1);
+-  }
+-  return embedding;
+-}
+-
+ const testEntities = [
+   {
+     name: 'TestEntity1',
+     entityType: 'test',
+     observations: ['Test observation 1', 'Test observation 2'],
+-    embedding: generateTestEmbedding(1),
+   },
+   {
+     name: 'TestEntity2',
+     entityType: 'test',
+     observations: ['Test observation 3', 'Test observation 4'],
+-    embedding: generateTestEmbedding(5),
+   },
+   {
+     name: 'TestEntity3',
+     entityType: 'test',
+     observations: ['Test observation 5', 'Test observation 6'],
+-    embedding: generateTestEmbedding(9),
+   },
+ ];
+ 
+@@ -93,6 +75,44 @@ const testRelations = [
+  * Run tests for the refactored modules
+  */
+ async function runTests() {
++  // Load all modules only after the test DB url is forced above
++  const [
++    { DatabaseManager: CoreDatabaseManager },
++    indexExports,
++    { EMBEDDING_DIMENSION }
++  ] = await Promise.all([
++    import('./core.js'),
++    import('./index.js'),
++    import('../services/embedding-service.js'),
++  ]);
++
++  const {
++    DatabaseManager: LegacyDatabaseManager,
++    createEntities,
++    searchSimilar,
++    getEntity,
++    searchEntities,
++    getRecentEntities,
++    deleteEntity,
++    createRelations,
++    deleteRelation,
++    getRelationsForEntities,
++    readGraph,
++    searchNodes,
++    arrayToVectorString,
++    extractVector,
++  } = indexExports;
++
++  // Helper function to generate a test embedding vector of the correct dimension
++  function generateTestEmbedding(seed: number): number[] {
++    const embedding: number[] = [];
++    for (let i = 0; i < EMBEDDING_DIMENSION; i++) {
++      // Generate a value between 0 and 1 based on the seed and position
++      embedding.push((seed * 0.1 + i * 0.001) % 1);
++    }
++    return embedding;
++  }
++
+   console.log('Starting database operations tests...');
+   
+   try {
+@@ -171,7 +191,6 @@ async function runTests() {
+         name: 'LegacyEntity',
+         entityType: 'test',
+         observations: ['Legacy observation 1', 'Legacy observation 2'],
+-        embedding: generateTestEmbedding(3), // Use a different seed for variety
+       },
+     ]);
+     console.log('✓ Snake case entity creation successful');
+@@ -213,4 +232,4 @@ async function runTests() {
+ }
+ 
+ // Run the tests
+-runTests().catch(console.error);
+\ No newline at end of file
++runTests().catch(console.error);
+diff --git a/src/index.ts b/src/index.ts
+index eb2c06e..1885cd4 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -3,7 +3,6 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+ import { ServerTransport } from './transports/transport.js';
+ import { SseServerTransport } from './transports/sse-transport.js';
+-import { TransportAdapter } from './transports/transport-adapter.js';
+ import {
+   CallToolRequestSchema,
+   ErrorCode,
+@@ -18,7 +17,6 @@ import { serverConfig } from './config/index.js';
+ import { logger } from './utils/logger.js';
+ import { toMcpError } from './utils/errors.js';
+ import { databaseService } from './services/database-service.js';
+-import { embeddingService } from './services/embedding-service.js';
+ import { createEntities, deleteEntity } from './services/entity-service.js';
+ import { createRelations, deleteRelation } from './services/relation-service.js';
+ import { readGraph, searchNodes } from './services/graph-service.js';
+@@ -96,13 +94,6 @@ class MemoryServer {
+                         type: 'string',
+                       },
+                     },
+-                    embedding: {
+-                      type: 'array',
+-                      items: {
+-                        type: 'number',
+-                      },
+-                      description: 'Optional vector embedding for similarity search',
+-                    },
+                     relations: {
+                       type: 'array',
+                       items: {
+@@ -157,10 +148,6 @@ class MemoryServer {
+                   },
+                 ],
+               },
+-              includeEmbeddings: {
+-                type: 'boolean',
+-                description: 'Whether to include embeddings in the returned entities (default: false)',
+-              },
+             },
+             required: [
+               'query',
+@@ -172,12 +159,7 @@ class MemoryServer {
+           description: 'Get recent entities and their relations',
+           inputSchema: {
+             type: 'object',
+-            properties: {
+-              includeEmbeddings: {
+-                type: 'boolean',
+-                description: 'Whether to include embeddings in the returned entities (default: false)',
+-              },
+-            },
++            properties: {},
+             required: [],
+           },
+         },
+@@ -271,52 +253,20 @@ class MemoryServer {
+           name: string;
+           entityType: string;
+           observations: string[];
+-          embedding?: number[];
+           relations?: Array<{
+             target: string;
+             relationType: string;
+           }>;
+         }
+ 
+-        interface SearchNodesInput {
+-          query: string | number[];
+-          includeEmbeddings?: boolean;
+-        }
+-
+-        interface ReadGraphInput {
+-          includeEmbeddings?: boolean;
+-        }
+-
+         interface RelationInput {
+           source: string;
+           target: string;
+           type: string;
+         }
+ 
+-        interface DeleteEntityInput {
+-          name: string;
+-        }
+-
+-        interface DeleteRelationInput {
+-          source: string;
+-          target: string;
+-          type: string;
+-        }
+-
+         switch (name) {
+           case 'create_entities': {
+-            // Define the expected type for entities
+-            interface EntityInput {
+-              name: string;
+-              entityType: string;
+-              observations: string[];
+-              embedding?: number[];
+-              relations?: Array<{
+-                target: string;
+-                relationType: string;
+-              }>;
+-            }
+-            
+             // Type assertion with proper interface
+             const entities = args.entities as EntityInput[];
+             await createEntities(entities);
+@@ -338,11 +288,10 @@ class MemoryServer {
+                 'Missing required parameter: query'
+               );
+             }
+-            
++
+             const query = args.query as string | number[];
+-            const includeEmbeddings = args.includeEmbeddings as boolean || false;
+-            
+-            const result = await searchNodes(query, includeEmbeddings);
++
++            const result = await searchNodes(query);
+             return {
+               content: [
+                 {
+@@ -354,11 +303,8 @@ class MemoryServer {
+           }
+ 
+           case 'read_graph': {
+-            // Safely access properties with type assertions
+-            const includeEmbeddings = args.includeEmbeddings as boolean || false;
+-            
+             // Use a fixed limit of 10 for the number of entities to return
+-            const result = await readGraph(10, includeEmbeddings);
++            const result = await readGraph(10);
+             return {
+               content: [
+                 {
+@@ -370,23 +316,16 @@ class MemoryServer {
+           }
+ 
+           case 'create_relations': {
+-            // Define the expected type for relations
+-            interface RelationInput {
+-              source: string;
+-              target: string;
+-              type: string;
+-            }
+-            
+             // Type assertion with proper interface
+             const relationInputs = args.relations as RelationInput[];
+-            
++
+             // Map to the format expected by createRelations
+             const relations = relationInputs.map(rel => ({
+               from: rel.source,
+               to: rel.target,
+               relationType: rel.type,
+             }));
+-            
++
+             await createRelations(relations);
+             return {
+               content: [
+diff --git a/src/models/index.ts b/src/models/index.ts
+index 0adbad2..ac7a5b6 100644
+--- a/src/models/index.ts
++++ b/src/models/index.ts
+@@ -4,16 +4,13 @@
+ export interface Entity {
+   /** Unique name identifier for the entity */
+   name: string;
+-  
++
+   /** Type of entity (e.g., person, topic, concept) */
+   entityType: string;
+-  
++
+   /** List of textual observations about the entity */
+   observations: string[];
+-  
+-  /** Optional vector embedding for similarity search */
+-  embedding?: number[];
+-  
++
+   /** Optional creation timestamp */
+   createdAt?: Date;
+ }
+@@ -66,21 +63,18 @@ export interface GraphResult {
+ export interface EntityCreateParams {
+   /** Entity name */
+   name: string;
+-  
++
+   /** Entity type */
+   entityType: string;
+-  
+-  /** List of observations */
++
++  /** List of observations - embeddings are generated automatically for each observation */
+   observations: string[];
+-  
+-  /** Optional embedding vector */
+-  embedding?: number[];
+-  
++
+   /** Optional relations to create with this entity */
+   relations?: Array<{
+     /** Target entity name */
+     target: string;
+-    
++
+     /** Relation type */
+     relationType: string;
+   }>;
+diff --git a/src/services/database-service.ts b/src/services/database-service.ts
+index ba98aee..7fee07c 100644
+--- a/src/services/database-service.ts
++++ b/src/services/database-service.ts
+@@ -67,23 +67,25 @@ export class DatabaseService {
+       logger.info(`Initializing database schema with vector dimension: ${EMBEDDING_DIMENSION}`);
+       
+       // Create tables if they don't exist - each as a single statement
++      // Entities table - no embedding (embeddings are on observations)
+       await this.client.execute({
+         sql: `
+           CREATE TABLE IF NOT EXISTS entities (
+             name TEXT PRIMARY KEY,
+             entity_type TEXT NOT NULL,
+-            embedding F32_BLOB(${EMBEDDING_DIMENSION}), -- Using configurable dimension
+             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+           )
+         `
+       });
+ 
++      // Observations table with embedding for semantic search
+       await this.client.execute({
+         sql: `
+           CREATE TABLE IF NOT EXISTS observations (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             entity_name TEXT NOT NULL,
+             content TEXT NOT NULL,
++            embedding F32_BLOB(${EMBEDDING_DIMENSION}),
+             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+             FOREIGN KEY (entity_name) REFERENCES entities(name)
+           )
+@@ -124,7 +126,7 @@ export class DatabaseService {
+             args: [],
+           },
+           {
+-            sql: 'CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities(libsql_vector_idx(embedding))',
++            sql: 'CREATE INDEX IF NOT EXISTS idx_observations_embedding ON observations(libsql_vector_idx(embedding))',
+             args: [],
+           },
+         ],
+diff --git a/src/services/entity-service.ts b/src/services/entity-service.ts
+index 7553337..e33c512 100644
+--- a/src/services/entity-service.ts
++++ b/src/services/entity-service.ts
+@@ -1,10 +1,9 @@
+ import { databaseService } from './database-service.js';
+ import { embeddingService } from './embedding-service.js';
+-import { arrayToVectorString, extractVector } from './vector-service.js';
++import { arrayToVectorString } from './vector-service.js';
+ import { logger } from '../utils/logger.js';
+ import { DatabaseError, ValidationError, parseDatabaseError } from '../utils/errors.js';
+-import { Entity, EntityCreateParams, SearchResult } from '../models/index.js';
+-import { DatabaseClient } from '../types/database.js';
++import { Entity, EntityCreateParams } from '../models/index.js';
+ 
+ /**
+  * Entity service for managing entities in the database
+@@ -32,33 +31,19 @@ export class EntityService {
+           throw new ValidationError(`Entity "${entity.name}" must have at least one observation`);
+         }
+ 
+-        // Generate embedding if not provided
+-        let embedding = entity.embedding;
+-        if (!embedding) {
+-          try {
+-            logger.info(`Generating embedding for entity: ${entity.name}`);
+-            const text = entity.observations.join(' ');
+-            embedding = await embeddingService.generateEmbedding(text);
+-          } catch (error) {
+-            logger.error(`Failed to generate embedding for entity "${entity.name}":`, error);
+-          }
+-        }
+-
+         // Use a transaction for entity and observations
+         await databaseService.transaction(async (txn) => {
+-          const vectorString = arrayToVectorString(embedding);
+-          
+-          // First try to update
++          // First try to update entity (no embedding on entity anymore)
+           const result = await txn.execute({
+-            sql: 'UPDATE entities SET entity_type = ?, embedding = vector32(?) WHERE name = ?',
+-            args: [entity.entityType, vectorString, entity.name],
++            sql: 'UPDATE entities SET entity_type = ? WHERE name = ?',
++            args: [entity.entityType, entity.name],
+           });
+ 
+           // If no rows affected, do insert
+           if (result.rowsAffected === 0) {
+             await txn.execute({
+-              sql: 'INSERT INTO entities (name, entity_type, embedding) VALUES (?, ?, vector32(?))',
+-              args: [entity.name, entity.entityType, vectorString],
++              sql: 'INSERT INTO entities (name, entity_type) VALUES (?, ?)',
++              args: [entity.name, entity.entityType],
+             });
+           }
+ 
+@@ -68,11 +53,22 @@ export class EntityService {
+             args: [entity.name],
+           });
+ 
+-          // Add new observations
++          // Add new observations with per-observation embeddings
+           for (const observation of entity.observations) {
++            let embedding: number[] | undefined;
++
++            try {
++              logger.info(`Generating embedding for observation: "${observation.substring(0, 50)}..."`);
++              embedding = await embeddingService.generateEmbedding(observation);
++            } catch (error) {
++              logger.error(`Failed to generate embedding for observation:`, error);
++            }
++
++            const vectorString = embedding ? arrayToVectorString(embedding) : null;
++
+             await txn.execute({
+-              sql: 'INSERT INTO observations (entity_name, content) VALUES (?, ?)',
+-              args: [entity.name, observation],
++              sql: 'INSERT INTO observations (entity_name, content, embedding) VALUES (?, ?, vector32(?))',
++              args: [entity.name, observation, vectorString],
+             });
+           }
+         });
+@@ -127,16 +123,12 @@ export class EntityService {
+   /**
+    * Gets an entity by name
+    * @param name - Name of the entity to retrieve
+-   * @param includeEmbeddings - Whether to include embeddings in the returned entity
+    */
+-  public static async getEntity(
+-    name: string,
+-    includeEmbeddings = false,
+-  ): Promise<Entity> {
++  public static async getEntity(name: string): Promise<Entity> {
+     const client = databaseService.getClient();
+-    
++
+     const entityResult = await client.execute({
+-      sql: 'SELECT name, entity_type, embedding FROM entities WHERE name = ?',
++      sql: 'SELECT name, entity_type FROM entities WHERE name = ?',
+       args: [name],
+     });
+ 
+@@ -149,34 +141,25 @@ export class EntityService {
+       args: [name],
+     });
+ 
+-    const embedding = includeEmbeddings && entityResult.rows[0].embedding
+-      ? await extractVector(client, entityResult.rows[0].embedding as Uint8Array)
+-      : undefined;
+-
+     return {
+       name: entityResult.rows[0].name as string,
+       entityType: entityResult.rows[0].entity_type as string,
+       observations: observationsResult.rows.map(
+         (row: { content: string }) => row.content as string,
+       ),
+-      embedding,
+     };
+   }
+ 
+   /**
+    * Gets recent entities
+    * @param limit - Maximum number of entities to retrieve
+-   * @param includeEmbeddings - Whether to include embeddings in the returned entities
+    */
+-  public static async getRecentEntities(
+-    limit = 10,
+-    includeEmbeddings = false,
+-  ): Promise<Entity[]> {
++  public static async getRecentEntities(limit = 10): Promise<Entity[]> {
+     try {
+       const client = databaseService.getClient();
+-      
++
+       const entityResults = await client.execute({
+-        sql: 'SELECT name, entity_type, embedding FROM entities ORDER BY rowid DESC LIMIT ?',
++        sql: 'SELECT name, entity_type FROM entities ORDER BY rowid DESC LIMIT ?',
+         args: [limit],
+       });
+ 
+@@ -185,26 +168,21 @@ export class EntityService {
+       }
+ 
+       const entities: Entity[] = [];
+-      
++
+       for (const row of entityResults.rows) {
+         const name = row.name as string;
+-        
++
+         const observationsResult = await client.execute({
+           sql: 'SELECT content FROM observations WHERE entity_name = ?',
+           args: [name],
+         });
+ 
+-        const embedding = includeEmbeddings && row.embedding
+-          ? await extractVector(client, row.embedding as Uint8Array)
+-          : undefined;
+-
+         entities.push({
+           name,
+           entityType: row.entity_type as string,
+           observations: observationsResult.rows.map(
+             (obsRow: { content: string }) => obsRow.content as string,
+           ),
+-          embedding,
+         });
+       }
+ 
+diff --git a/src/services/graph-service.ts b/src/services/graph-service.ts
+index 25fdb24..5fb2d66 100644
+--- a/src/services/graph-service.ts
++++ b/src/services/graph-service.ts
+@@ -3,9 +3,15 @@ import { embeddingService } from './embedding-service.js';
+ import { logger } from '../utils/logger.js';
+ import { DatabaseError, ValidationError } from '../utils/errors.js';
+ import { Entity, GraphResult } from '../models/index.js';
+-import { EntityService, getEntity, getRecentEntities } from './entity-service.js';
++import { getEntity, getRecentEntities } from './entity-service.js';
+ import { getRelationsForEntities } from './relation-service.js';
+ 
++/** Similarity threshold for matching observations (cosine distance). Smaller = stricter. */
++const SIMILARITY_THRESHOLD = Number(process.env.SIMILARITY_THRESHOLD ?? '0.4');
++
++/** Maximum number of entities to return from search */
++const MAX_RESULTS = Number(process.env.SIMILARITY_MAX_RESULTS ?? '10');
++
+ /**
+  * Graph service for managing graph operations
+  */
+@@ -13,17 +19,13 @@ export class GraphService {
+   /**
+    * Reads the recent entities and their relations to form a graph
+    * @param limit - Maximum number of recent entities to include
+-   * @param includeEmbeddings - Whether to include embeddings in the returned entities
+    * @returns Graph result with entities and relations
+    */
+-  public static async readGraph(
+-    limit = 10,
+-    includeEmbeddings = false,
+-  ): Promise<GraphResult> {
++  public static async readGraph(limit = 10): Promise<GraphResult> {
+     try {
+       // Get recent entities
+-      const recentEntities = await getRecentEntities(limit, includeEmbeddings);
+-      
++      const recentEntities = await getRecentEntities(limit);
++
+       // If no entities found, return empty graph
+       if (!recentEntities || recentEntities.length === 0) {
+         return {
+@@ -31,13 +33,13 @@ export class GraphService {
+           relations: [],
+         };
+       }
+-      
++
+       // Get entity names
+       const entityNames = recentEntities.map((entity: Entity) => entity.name);
+-      
++
+       // Get relations for these entities
+       const relations = await getRelationsForEntities(entityNames);
+-      
++
+       // Return graph result
+       return {
+         entities: recentEntities,
+@@ -52,155 +54,184 @@ export class GraphService {
+ 
+   /**
+    * Searches for nodes in the graph by text query or vector similarity
++   * Searches observation embeddings and ranks entities by number of matching observations
+    * @param query - Text query or vector embedding for search
+-   * @param includeEmbeddings - Whether to include embeddings in the returned entities
+    * @returns Graph result with matching entities and their relations
+    */
+-  public static async searchNodes(
+-    query: string | number[],
+-    includeEmbeddings = false,
+-  ): Promise<GraphResult> {
++  public static async searchNodes(query: string | number[]): Promise<GraphResult> {
+     try {
+-      let entities: Entity[] = [];
++      // Ensure database schema exists even if caller forgot to initialize the service
++      await databaseService.initialize();
++
++      let entityNames: string[] = [];
+ 
+       if (Array.isArray(query)) {
+         // Validate vector query
+         if (!query.every((n) => typeof n === 'number')) {
+           throw new ValidationError('Vector query must contain only numbers');
+         }
+-        
+-        // Vector similarity search
+-        const client = databaseService.getClient();
+-        const results = await client.execute({
+-          sql: `
+-            SELECT e.name
+-            FROM entities e
+-            WHERE e.embedding IS NOT NULL
+-            ORDER BY vector_distance_cos(e.embedding, vector32(?)) ASC
+-            LIMIT 5
+-          `,
+-          args: [JSON.stringify(query)],
+-        });
+-        
+-        // Get full entities with observations
+-        entities = await Promise.all(
+-          results.rows.map(async (row: { name: string }) => 
+-            getEntity(row.name as string, includeEmbeddings)
+-          )
+-        );
++
++        // Vector similarity search on observations, fallback to empty result if vector search fails
++        try {
++          entityNames = await GraphService.searchByVector(query);
++        } catch (vectorError) {
++          logger.error('Vector search failed, returning no results:', vectorError);
++          entityNames = [];
++        }
+       } else {
+         // Validate text query
+         if (typeof query !== 'string') {
+           throw new ValidationError('Text query must be a string');
+         }
+-        if (query.trim() === '') {
++        const trimmedQuery = query.trim();
++        if (trimmedQuery === '') {
+           throw new ValidationError('Text query cannot be empty');
+         }
+-        
++
+         try {
+-          // Try semantic search first by generating an embedding for the text query
+-          logger.info(`Generating embedding for text query: "${query}"`);
+-          const embedding = await embeddingService.generateEmbedding(query);
+-          
+-          // Vector similarity search using the generated embedding
++          // Generate embedding for text query
++          logger.info(`Generating embedding for text query: "${trimmedQuery}"`);
++          const embedding = await embeddingService.generateEmbedding(trimmedQuery);
++
++          // Vector similarity search using generated embedding
+           logger.info(`Performing semantic search with generated embedding`);
+-          const client = databaseService.getClient();
+-          const results = await client.execute({
+-            sql: `
+-              SELECT e.name
+-              FROM entities e
+-              WHERE e.embedding IS NOT NULL
+-              ORDER BY vector_distance_cos(e.embedding, vector32(?)) ASC
+-              LIMIT 5
+-            `,
+-            args: [JSON.stringify(embedding)],
+-          });
+-          
+-          // Get full entities with observations
+-          entities = await Promise.all(
+-            results.rows.map(async (row: { name: string }) => 
+-              getEntity(row.name as string, includeEmbeddings)
+-            )
+-          );
+-          
+-          // If we got results, return them
+-          if (entities.length > 0) {
+-            logger.info(`Found ${entities.length} entities via semantic search`);
++          entityNames = await GraphService.searchByVector(embedding);
++
++          if (entityNames.length > 0) {
++            logger.info(`Found ${entityNames.length} entities via semantic search`);
+           } else {
+-            // Fall back to text search if no results from semantic search
++            // Fallback to text search
+             logger.info(`No results from semantic search, falling back to text search`);
+-            
+-            // Text-based search
+-            const client = databaseService.getClient();
+-            const results = await client.execute({
+-              sql: `
+-                SELECT DISTINCT e.name
+-                FROM entities e
+-                LEFT JOIN observations o ON e.name = o.entity_name
+-                WHERE e.name LIKE ? OR e.entity_type LIKE ? OR o.content LIKE ?
+-                LIMIT 5
+-              `,
+-              args: [`%${query}%`, `%${query}%`, `%${query}%`],
+-            });
+-            
+-            // Get full entities with observations
+-            entities = await Promise.all(
+-              results.rows.map(async (row: { name: string }) => 
+-                getEntity(row.name as string, includeEmbeddings)
+-              )
+-            );
++            entityNames = await GraphService.searchByText(trimmedQuery);
+           }
+         } catch (embeddingError) {
+-          // If embedding generation fails, fall back to text search
+-          logger.error(`Failed to generate embedding for query, falling back to text search:`, embeddingError);
+-          
+-          // Text-based search
+-          const client = databaseService.getClient();
+-          const results = await client.execute({
+-            sql: `
+-              SELECT DISTINCT e.name
+-              FROM entities e
+-              LEFT JOIN observations o ON e.name = o.entity_name
+-              WHERE e.name LIKE ? OR e.entity_type LIKE ? OR o.content LIKE ?
+-              LIMIT 5
+-            `,
+-            args: [`%${query}%`, `%${query}%`, `%${query}%`],
+-          });
+-          
+-          // Get full entities with observations
+-          entities = await Promise.all(
+-            results.rows.map(async (row: { name: string }) => 
+-              getEntity(row.name as string, includeEmbeddings)
+-            )
+-          );
++          // If embedding generation or vector search fails, fall back to text search
++          logger.error(`Failed to generate embedding or perform semantic search, falling back to text search:`, embeddingError);
++          try {
++            entityNames = await GraphService.searchByText(trimmedQuery);
++          } catch (textError) {
++            // Last-resort: log and return empty instead of throwing, to avoid hard failures in clients
++            logger.error('Text search failed after embedding fallback, returning no results:', textError);
++            entityNames = [];
++          }
+         }
+       }
+ 
+       // If no entities found, return empty graph
+-      if (entities.length === 0) {
++      if (entityNames.length === 0) {
+         return { entities: [], relations: [] };
+       }
+ 
+-      // Get entity names
+-      const entityNames = entities.map((entity: Entity) => entity.name);
+-      
++      // Get full entities with ALL observations (not just matching ones)
++      const entities = await Promise.all(
++        entityNames.map(async (name: string) => getEntity(name))
++      );
++
+       // Get relations for these entities
+       const relations = await getRelationsForEntities(entityNames);
+-      
+-      // Return graph result
++
+       return { entities, relations };
+     } catch (error) {
+       if (error instanceof ValidationError) {
+         throw error;
+       }
+-      
++
+       throw new DatabaseError(
+         `Node search failed: ${error instanceof Error ? error.message : String(error)}`
+       );
+     }
+   }
++
++  /**
++   * Search observations by vector similarity and return entity names
++   * Ranks entities by: (1) number of matching observations, (2) average similarity
++   * @param embedding - Query embedding vector
++   * @returns Array of entity names ranked by relevance
++   */
++  private static async searchByVector(embedding: number[]): Promise<string[]> {
++    const client = databaseService.getClient();
++    const vectorString = JSON.stringify(embedding);
++
++    // Search observations with similarity threshold and aggregate by entity
++    // Using CTE to find matching observations, then aggregate and rank
++    const results = await client.execute({
++      sql: `
++        WITH matching_observations AS (
++          SELECT
++            o.entity_name,
++            o.id AS observation_id,
++            vector_distance_cos(o.embedding, vector32(?)) AS distance
++          FROM observations o
++          WHERE o.embedding IS NOT NULL
++            AND vector_distance_cos(o.embedding, vector32(?)) <= ?
++        ),
++        entity_matches AS (
++          SELECT
++            mo.entity_name,
++            COUNT(DISTINCT mo.observation_id) AS match_count,
++            AVG(mo.distance) AS avg_distance
++          FROM matching_observations mo
++          GROUP BY mo.entity_name
++        )
++        SELECT em.entity_name
++        FROM entity_matches em
++        ORDER BY em.avg_distance ASC, em.match_count DESC
++        LIMIT ?
++      `,
++      args: [vectorString, vectorString, SIMILARITY_THRESHOLD, MAX_RESULTS],
++    });
++
++    return results.rows.map((row: { entity_name: string }) => row.entity_name as string);
++  }
++
++  /**
++   * Search by text using word-based fuzzy matching
++   * Splits query into words and searches for each using LIKE
++   * @param query - Text query
++   * @returns Array of entity names ranked by relevance
++   */
++  private static async searchByText(query: string): Promise<string[]> {
++    const client = databaseService.getClient();
++
++    // Split query into words for fuzzy matching
++    const words = query.trim().split(/\s+/).filter((w) => w.length > 0);
++
++    if (words.length === 0) {
++      return [];
++    }
++
++    // Build LIKE conditions for each word
++    // Each word can match entity name, entity type, or observation content
++    const conditions = words
++      .map(() => '(e.name LIKE ? OR e.entity_type LIKE ? OR o.content LIKE ?)')
++      .join(' OR ');
++
++    // Flatten arguments: each word generates 3 LIKE patterns
++    const args = words.flatMap((word) => {
++      const pattern = `%${word}%`;
++      return [pattern, pattern, pattern];
++    });
++
++    // Add limit to args
++    args.push(MAX_RESULTS.toString());
++
++    const results = await client.execute({
++      sql: `
++        SELECT e.name, COUNT(DISTINCT o.id) as match_count
++        FROM entities e
++        LEFT JOIN observations o ON e.name = o.entity_name
++        WHERE ${conditions}
++        GROUP BY e.name
++        ORDER BY match_count DESC
++        LIMIT ?
++      `,
++      args,
++    });
++
++    return results.rows.map((row: { name: string }) => row.name as string);
++  }
+ }
+ 
+ // Export convenience functions
+ export const readGraph = GraphService.readGraph;
+-export const searchNodes = GraphService.searchNodes;
+\ No newline at end of file
++export const searchNodes = GraphService.searchNodes;

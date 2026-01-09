@@ -44,21 +44,15 @@ async function regenerateEmbeddingsAfterMigration() {
                     continue;
                 }
                 
-                // Generate embedding from observations
-                logger.info(`Generating embedding for entity "${entityName}" using ${embeddingService.getModelName()}`);
-                const text = observations.join(' ');
-                const embedding = await embeddingService.generateEmbedding(text);
-                logger.info(`Successfully generated embedding with dimension: ${embedding.length}`);
-                
-                // Update entity with new embedding
+                // Update entity - embeddings are now auto-generated per observation
+                logger.info(`Updating entity "${entityName}" to regenerate per-observation embeddings`);
                 await dbManager.create_entities([{
                     name: entityName,
                     entityType: entityType,
                     observations: observations,
-                    embedding: embedding
                 }]);
-                
-                logger.info(`Successfully updated embedding for entity "${entityName}"`);
+
+                logger.info(`Successfully updated entity "${entityName}" with auto-generated embeddings`);
                 successCount++;
                 
             } catch (error) {
