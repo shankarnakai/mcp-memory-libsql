@@ -87,10 +87,11 @@ export function loadConfig(): AppConfig {
         transport: (process.env.TRANSPORT_TYPE as 'stdio' | 'sse') || defaultConfig.server.transport,
         sseOptions: defaultConfig.server.sseOptions,
       },
-      database: {
-        url: process.env.DATABASE_URL || defaultConfig.database.url,
-        authToken: process.env.DATABASE_AUTH_TOKEN,
-      },
+  database: {
+    // Use LIBSQL_URL (primary) with optional LIBSQL_AUTH_TOKEN
+    url: process.env.LIBSQL_URL || defaultConfig.database.url,
+    authToken: process.env.LIBSQL_AUTH_TOKEN,
+  },
       embedding: {
         model: process.env.EMBEDDING_MODEL || defaultConfig.embedding.model,
         dimension: parseInt(process.env.EMBEDDING_DIMENSION || String(defaultConfig.embedding.dimension), 10),

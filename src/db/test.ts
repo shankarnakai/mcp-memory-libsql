@@ -28,7 +28,8 @@ if (existsSync(dbFilePath)) {
   rmSync(dbFilePath);
 }
 
-process.env.DATABASE_URL ??= `file:${dbFilePath}`;
+// Use LIBSQL_URL for tests to align with runtime configuration
+process.env.LIBSQL_URL ??= `file:${dbFilePath}`;
 
 // Test configuration
 const config: DatabaseConfig = {

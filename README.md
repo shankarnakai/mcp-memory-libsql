@@ -41,6 +41,46 @@ Add this to your Cline MCP settings:
 }
 ```
 
+### Local Repository (Direct) Configuration
+
+If you've cloned this repository and want to run the server directly from
+your working copy (no npm install needed), build it once and point your
+MCP client at the local entry point:
+
+```bash
+pnpm install
+pnpm build   # creates dist/index.js
+```
+
+Then use an absolute path to this repo in your MCP config (works for
+Cline, Claude Desktop, and other MCP clients):
+
+```json
+{
+	"mcpServers": {
+		"mcp-memory-libsql": {
+			"command": "node",
+			"args": [
+				"/Users/your-username/personal/mcp-semantic-memory-libsql-v1/dist/index.js"
+			],
+			"cwd": "/Users/your-username/personal/mcp-semantic-memory-libsql-v1",
+			"env": {
+				"LIBSQL_URL": "file:/path/to/database.db"
+			}
+		}
+	}
+}
+```
+
+Development shortcut: if you prefer running the TypeScript entrypoint
+without building, swap the `command`/`args` with:
+
+```json
+"command": "pnpm",
+"args": ["dev"],
+"cwd": "/Users/your-username/personal/mcp-semantic-memory-libsql-v1"
+```
+
 ### Claude Desktop with WSL Configuration
 
 For a detailed guide on setting up this server with Claude Desktop in
@@ -66,8 +106,8 @@ Add this to your Claude Desktop configuration for WSL environments:
 
 ### Database Configuration
 
-The server supports both local SQLite and remote libSQL databases
-through the LIBSQL_URL environment variable:
+The server supports both local SQLite and remote libSQL databases. Use
+the `LIBSQL_URL` environment variable (with optional `LIBSQL_AUTH_TOKEN`).
 
 For local SQLite databases:
 
@@ -94,8 +134,8 @@ Note: When using WSL, ensure the database path uses the Linux
 filesystem format (e.g., `/home/username/...`) rather than Windows
 format.
 
-By default, if no URL is provided, it will use `file:/memory-tool.db`
-in the current directory.
+By default, if no URL is provided, it will use `file:memory.db` in the
+current directory.
 
 ## API
 

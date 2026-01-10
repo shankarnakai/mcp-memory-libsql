@@ -5,7 +5,7 @@
  *
  * Usage: node --loader ts-node/esm src/db/migrations/add-embedding-column.ts
  *
- * Set DATABASE_URL environment variable or it will use the default from config.
+ * Set LIBSQL_URL environment variable or it will use the default from config.
  */
 import { createClient } from '@libsql/client';
 import { config } from 'dotenv';
@@ -13,18 +13,18 @@ import { config } from 'dotenv';
 // Load environment variables
 config();
 
-const DATABASE_URL = process.env.DATABASE_URL || 'file:memory.db';
-const DATABASE_AUTH_TOKEN = process.env.DATABASE_AUTH_TOKEN;
+const LIBSQL_URL = process.env.LIBSQL_URL || 'file:memory.db';
+const LIBSQL_AUTH_TOKEN = process.env.LIBSQL_AUTH_TOKEN;
 const EMBEDDING_DIMENSION = 384;
 
 async function addEmbeddingColumn() {
     console.log('Starting migration to add embedding column...');
-    console.log(`Database URL: ${DATABASE_URL}`);
+    console.log(`Database URL: ${LIBSQL_URL}`);
     console.log(`Embedding dimension: ${EMBEDDING_DIMENSION}`);
 
     const client = createClient({
-        url: DATABASE_URL,
-        authToken: DATABASE_AUTH_TOKEN,
+        url: LIBSQL_URL,
+        authToken: LIBSQL_AUTH_TOKEN,
     });
 
     try {
