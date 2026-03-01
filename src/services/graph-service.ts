@@ -88,31 +88,54 @@ export class GraphService {
           throw new ValidationError('Text query cannot be empty');
         }
 
+        // Run fuzzy entity name search concurrently with semantic search
+        const fuzzyNameSearchPromise = GraphService.searchByEntityNameFuzzy(trimmedQuery)
+          .catch((err) => {
+            logger.error('Fuzzy entity name search failed:', err);
+            return [] as string[];
+          });
+
         try {
           // Generate embedding for text query
           logger.info(`Generating embedding for text query: "${trimmedQuery}"`);
           const embedding = await embeddingService.generateEmbedding(trimmedQuery);
 
-          // Vector similarity search using generated embedding
-          logger.info(`Performing semantic search with generated embedding`);
-          entityNames = await GraphService.searchByVector(embedding);
+          // Run semantic vector search and await fuzzy name search concurrently
+          logger.info(`Performing semantic search with generated embedding (concurrent with fuzzy name search)`);
+          const [semanticResults, fuzzyNameResults] = await Promise.all([
+            GraphService.searchByVector(embedding).catch((err) => {
+              logger.error('Vector search failed:', err);
+              return [] as string[];
+            }),
+            fuzzyNameSearchPromise,
+          ]);
+
+          // Merge results: fuzzy name matches first (exact/close name matches are high signal),
+          // then semantic results, deduplicated
+          entityNames = GraphService.mergeResults(fuzzyNameResults, semanticResults);
 
           if (entityNames.length > 0) {
-            logger.info(`Found ${entityNames.length} entities via semantic search`);
+            logger.info(`Found ${entityNames.length} entities (${fuzzyNameResults.length} from fuzzy name, ${semanticResults.length} from semantic)`);
           } else {
-            // Fallback to text search
-            logger.info(`No results from semantic search, falling back to text search`);
+            // Fallback to broader text search on observations
+            logger.info(`No results from semantic or fuzzy name search, falling back to text search`);
             entityNames = await GraphService.searchByText(trimmedQuery);
           }
         } catch (embeddingError) {
-          // If embedding generation or vector search fails, fall back to text search
-          logger.error(`Failed to generate embedding or perform semantic search, falling back to text search:`, embeddingError);
+          // If embedding generation fails, await fuzzy name results and fall back to text search
+          logger.error(`Failed to generate embedding, falling back to fuzzy name + text search:`, embeddingError);
           try {
-            entityNames = await GraphService.searchByText(trimmedQuery);
+            const fuzzyNameResults = await fuzzyNameSearchPromise;
+            const textResults = await GraphService.searchByText(trimmedQuery);
+            entityNames = GraphService.mergeResults(fuzzyNameResults, textResults);
           } catch (textError) {
-            // Last-resort: log and return empty instead of throwing, to avoid hard failures in clients
-            logger.error('Text search failed after embedding fallback, returning no results:', textError);
-            entityNames = [];
+            // Last-resort: use whatever fuzzy name results we have
+            logger.error('Text search failed after embedding fallback:', textError);
+            try {
+              entityNames = await fuzzyNameSearchPromise;
+            } catch {
+              entityNames = [];
+            }
           }
         }
       }
@@ -229,6 +252,87 @@ export class GraphService {
     });
 
     return results.rows.map((row: { name: string }) => row.name as string);
+  }
+
+  /**
+   * Fuzzy search on entity names by splitting the query into tokens
+   * (by hyphens, underscores, spaces, dots) and matching against entity names.
+   * Also matches the full query as an exact/substring match.
+   * Results are scored by how many tokens match, with exact matches ranked highest.
+   * @param query - Text query to fuzzy match against entity names
+   * @returns Array of entity names ranked by relevance
+   */
+  private static async searchByEntityNameFuzzy(query: string): Promise<string[]> {
+    const client = databaseService.getClient();
+
+    // Tokenize the query by common delimiters (hyphens, underscores, spaces, dots)
+    const tokens = query
+      .trim()
+      .split(/[-_\s.]+/)
+      .filter((t) => t.length > 0)
+      .map((t) => t.toLowerCase());
+
+    if (tokens.length === 0) {
+      return [];
+    }
+
+    // Build scoring SQL: exact match gets highest priority,
+    // then substring match on full query, then token-based matching
+    const fullPattern = `%${query.trim()}%`;
+
+    // Each token adds a point if it matches (using LIKE on lowercased name)
+    const tokenScoreClauses = tokens
+      .map(() => '(CASE WHEN LOWER(e.name) LIKE ? THEN 1 ELSE 0 END)')
+      .join(' + ');
+
+    const tokenArgs = tokens.map((t) => `%${t}%`);
+
+    const results = await client.execute({
+      sql: `
+        SELECT
+          e.name,
+          (CASE WHEN LOWER(e.name) = ? THEN 100 ELSE 0 END) +
+          (CASE WHEN LOWER(e.name) LIKE ? THEN 50 ELSE 0 END) +
+          (${tokenScoreClauses}) AS relevance_score
+        FROM entities e
+        WHERE LOWER(e.name) LIKE ?
+          OR (${tokens.map(() => 'LOWER(e.name) LIKE ?').join(' OR ')})
+        ORDER BY relevance_score DESC
+        LIMIT ?
+      `,
+      args: [
+        query.trim().toLowerCase(),   // exact match check
+        fullPattern.toLowerCase(),     // substring match on full query
+        ...tokenArgs,                  // token score clauses
+        fullPattern.toLowerCase(),     // WHERE: full query substring
+        ...tokenArgs,                  // WHERE: individual token matches
+        MAX_RESULTS,
+      ],
+    });
+
+    return results.rows.map((row: { name: string }) => row.name as string);
+  }
+
+  /**
+   * Merge and deduplicate entity name results from multiple search strategies.
+   * Preserves ordering within each list, with earlier lists having higher priority.
+   * @param lists - Arrays of entity names to merge, in priority order
+   * @returns Deduplicated array of entity names, limited to MAX_RESULTS
+   */
+  private static mergeResults(...lists: string[][]): string[] {
+    const seen = new Set<string>();
+    const merged: string[] = [];
+
+    for (const list of lists) {
+      for (const name of list) {
+        if (!seen.has(name)) {
+          seen.add(name);
+          merged.push(name);
+        }
+      }
+    }
+
+    return merged.slice(0, MAX_RESULTS);
   }
 }
 
